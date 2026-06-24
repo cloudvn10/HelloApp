@@ -1,17 +1,16 @@
 name: HelloApp
+options:
+  bundleIdPrefix: com.test
 targets:
   HelloApp:
     type: application
     platform: iOS
-    sources:
-      - path: HelloApp
+    deploymentTarget: "14.0"
+    sources: [HelloApp/HelloApp]
     info:
       path: HelloApp/HelloApp/Info.plist
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.helloapp.app
-        PRODUCT_NAME: HelloApp
-        TARGETED_DEVICE_FAMILY: "1"
-        SWIFT_VERSION: "5.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.test.helloapp
         CODE_SIGNING_ALLOWED: NO
         CODE_SIGNING_REQUIRED: NO
