@@ -60,6 +60,34 @@
     padding-left: 2px;
   }
 
+  .countries-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .country-card {
+    background: #0d0d0d;
+    border: 1px solid #1f1f1f;
+    border-radius: 14px;
+    padding: 10px 8px 8px;
+    text-align: center;
+    -webkit-user-select: none;
+  }
+  .country-card:active { transform: scale(0.96); }
+  .flag-dot {
+    width: 100%;
+    aspect-ratio: 3/2;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .country-name {
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 6px;
+    color: #9a9a9a;
+  }
+  .country-link { text-decoration: none; display: block; }
+
   .input-row { display: flex; gap: 8px; }
   .input-field {
     flex: 1;
@@ -88,68 +116,13 @@
     text-align: center;
     text-decoration: none;
     display: block;
-    cursor: pointer;
   }
   .btn:active { transform: scale(0.98); }
-  .btn:disabled { opacity: 0.5; }
 
   .btn-off {
     background: #1a1a1a;
     color: #ff4d4d;
     border: 1px solid #2a2a2a;
-  }
-
-  .btn-secondary {
-    background: #1a1a1a;
-    color: #f2f2f0;
-    border: 1px solid #2a2a2a;
-  }
-
-  /* ---- proxy checker list ---- */
-  .proxy-list-box {
-    background: #0d0d0d;
-    border: 1px solid #1f1f1f;
-    border-radius: 14px;
-    padding: 10px;
-    max-height: 280px;
-    overflow-y: auto;
-  }
-  .proxy-list-box::-webkit-scrollbar { width: 4px; }
-  .proxy-list-box::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
-
-  .proxy-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 9px 10px;
-    border-radius: 8px;
-    background: #131313;
-    border: 1px solid #1f1f1f;
-    margin-bottom: 6px;
-    font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .proxy-row:last-child { margin-bottom: 0; }
-  .proxy-host { color: #d0d0d0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .proxy-status {
-    flex-shrink: 0;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    padding: 3px 8px;
-    border-radius: 6px;
-  }
-  .proxy-status.pending { background: #2a2a2a; color: #8a8a8a; }
-  .proxy-status.checking { background: #2a2a2a; color: #c8ff3d; }
-  .proxy-status.alive { background: rgba(200,255,61,0.15); color: #c8ff3d; cursor: pointer; }
-  .proxy-status.dead { background: rgba(255,77,77,0.12); color: #ff4d4d; }
-
-  .empty-state {
-    text-align: center;
-    color: #5c5c5c;
-    font-size: 12px;
-    padding: 16px 0;
   }
 
   .steps {
@@ -170,71 +143,63 @@
 
   <div class="header">
     <div class="logo">SHADOW<span>VPN</span></div>
-    <div class="subtitle">iOS Wi-Fi Proxy Profile</div>
+    <div class="subtitle">iOS Proxy Profile</div>
   </div>
 
   <div class="main-content">
 
     <div class="info-box">
-      Профиль работает только когда телефон подключён к указанной Wi-Fi сети.
-      На мобильном интернете и других сетях прокси не действует — это ограничение iOS, не баг.
+      На iPhone прокси работает через системный профиль, а не через приложение.
+      Тапни страну — скачается файл <b>.mobileconfig</b> — поставь его в Настройках.
     </div>
 
-    <div class="section-label">Бесплатные прокси (с GitHub)</div>
-    <button class="btn btn-secondary" id="fetchBtn">🔄 Загрузить и проверить список</button>
-    <div class="proxy-list-box" id="proxyListBox">
-      <div class="empty-state">Нажми "Загрузить", чтобы получить список</div>
-    </div>
+    <div class="section-label">Локации</div>
+    <div class="countries-grid" id="grid"></div>
 
-    <div class="section-label">Wi-Fi сеть (SSID)</div>
-    <div class="input-row">
-      <input type="text" class="input-field" id="ssid" placeholder="Например HUAWEI-7">
-    </div>
-
-    <div class="section-label">Прокси сервер</div>
+    <div class="section-label">Свой сервер</div>
     <div class="input-row">
       <input type="text" class="input-field" id="host" placeholder="IP или хост">
       <input type="text" class="input-field small" id="port" placeholder="Порт" value="8080">
     </div>
     <button class="btn" id="customBtn">Создать профиль</button>
 
-    <button class="btn btn-off" id="offBtn">Stop (отключить прокси)</button>
+    <button class="btn btn-off" id="offBtn">Отключить прокси (профиль OFF)</button>
 
     <div class="steps">
       <b>Как поставить профиль:</b>
       <ol>
-        <li>Загрузи список или впиши свой прокси, тапни на живой (или "Создать профиль")</li>
-        <li>Заполнится host/port — жми "Создать профиль"</li>
-        <li>Откроется окно "Поделиться" — выбери "Сохранить в Файлы"</li>
-        <li>Настройки → сверху появится "Профиль загружен" → Установить</li>
-        <li>Прокси активен только когда ты на этой Wi-Fi сети</li>
+        <li>Тапни страну или "Создать профиль"</li>
+        <li>Safari спросит — разреши скачать</li>
+        <li>Настройки → Загружен профиль (вверху)</li>
+        <li>Установить → введи код-пароль → Установить</li>
+        <li>Готово — прокси работает на всём телефоне</li>
       </ol>
-      Чтобы выключить — жми "Stop" и установи получившийся профиль тем же способом.
+      Чтобы выключить — Настройки → Основные → VPN и управление устройством →
+      найди профиль → Удалить профиль. Или поставь "Отключить прокси" сверху.
     </div>
 
   </div>
 </div>
 
 <script>
+const COUNTRIES = [
+  { id: 'uk', name: 'UK', host: '86.53.163.185', port: 10001, color: '#012169' },
+  { id: 'usa', name: 'US', host: '47.79.119.13', port: 8080, color: '#3c3b6e' },
+  { id: 'nl', name: 'NL', host: '138.124.113.102', port: 7443, color: 'linear-gradient(180deg,#ae1c28 33%,white 33%,white 66%,#21468b 66%)' },
+  { id: 'fr', name: 'FR', host: '40.89.145.14', port: 80, color: 'linear-gradient(90deg,#002395 33%,white 33%,white 66%,#ed2939 66%)' },
+  { id: 'de', name: 'DE', host: '138.201.198.53', port: 80, color: 'linear-gradient(180deg,#000 33%,#dd0000 33%,#dd0000 66%,#ffce00 66%)' },
+  { id: 'pl', name: 'PL', host: '178.212.144.7', port: 80, color: 'linear-gradient(180deg,white 50%,#dc143c 50%)' }
+];
+
 function escapeXML(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function makeUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-const FIXED_PROFILE_UUID = "a1b2c3d4-0000-4000-8000-000000000001";
-const FIXED_PROFILE_ID = "com.shadowvpn.profile.main";
-
-function buildMobileConfig(host, port, ssid) {
-  const payloadUUID = makeUUID();
+function buildMobileConfig(host, port, label) {
+  const payloadUUID = crypto.randomUUID();
+  const profileUUID = crypto.randomUUID();
+  const safeLabel = escapeXML(label);
   const safeHost = escapeXML(host);
-  const safeSsid = escapeXML(ssid);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -244,48 +209,47 @@ function buildMobileConfig(host, port, ssid) {
   <array>
     <dict>
       <key>PayloadType</key>
-      <string>com.apple.wifi.managed</string>
+      <string>com.apple.proxy.http.global</string>
       <key>PayloadVersion</key>
       <integer>1</integer>
       <key>PayloadIdentifier</key>
-      <string>com.shadowvpn.wifi.${payloadUUID}</string>
+      <string>com.shadowvpn.proxy.${payloadUUID}</string>
       <key>PayloadUUID</key>
       <string>${payloadUUID}</string>
       <key>PayloadDisplayName</key>
-      <string>ShadowVPN Wi-Fi</string>
-      <key>SSID_STR</key>
-      <string>${safeSsid}</string>
-      <key>EncryptionType</key>
-      <string>WPA2</string>
+      <string>ShadowVPN Proxy - ${safeLabel}</string>
       <key>ProxyType</key>
       <string>Manual</string>
       <key>ProxyServer</key>
       <string>${safeHost}</string>
       <key>ProxyServerPort</key>
       <integer>${parseInt(port)}</integer>
+      <key>ProxyCaptiveLoginAllowed</key>
+      <false/>
     </dict>
   </array>
   <key>PayloadDisplayName</key>
-  <string>ShadowVPN Active</string>
+  <string>ShadowVPN - ${safeLabel}</string>
   <key>PayloadIdentifier</key>
-  <string>${FIXED_PROFILE_ID}</string>
+  <string>com.shadowvpn.profile.${profileUUID}</string>
   <key>PayloadRemovalDisallowed</key>
   <false/>
   <key>PayloadType</key>
   <string>Configuration</string>
   <key>PayloadUUID</key>
-  <string>${FIXED_PROFILE_UUID}</string>
+  <string>${profileUUID}</string>
   <key>PayloadVersion</key>
   <integer>1</integer>
   <key>PayloadOrganization</key>
   <string>ShadowVPN</string>
   <key>PayloadDescription</key>
-  <string>Прокси ${safeHost}:${port} для сети ${safeSsid}</string>
+  <string>Включает HTTP-прокси через ${safeHost}:${port}</string>
 </dict>
 </plist>`;
 }
 
 function buildOffConfig() {
+  const profileUUID = crypto.randomUUID();
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -293,150 +257,68 @@ function buildOffConfig() {
   <key>PayloadContent</key>
   <array></array>
   <key>PayloadDisplayName</key>
-  <string>ShadowVPN Active</string>
+  <string>ShadowVPN - OFF</string>
   <key>PayloadIdentifier</key>
-  <string>${FIXED_PROFILE_ID}</string>
+  <string>com.shadowvpn.profile.off.${profileUUID}</string>
   <key>PayloadRemovalDisallowed</key>
   <false/>
   <key>PayloadType</key>
   <string>Configuration</string>
   <key>PayloadUUID</key>
-  <string>${FIXED_PROFILE_UUID}</string>
+  <string>${profileUUID}</string>
   <key>PayloadVersion</key>
   <integer>1</integer>
   <key>PayloadOrganization</key>
   <string>ShadowVPN</string>
   <key>PayloadDescription</key>
-  <string>Профиль без прокси — Stop</string>
+  <string>Удали старый профиль вручную через Настройки, этот файл просто заглушка</string>
 </dict>
 </plist>`;
 }
 
 function downloadConfig(xml, filename) {
-  const base64 = btoa(unescape(encodeURIComponent(xml)));
-  const dataUrl = 'data:application/x-apple-aspen-config;base64,' + base64;
-  window.location.href = dataUrl;
+  const blob = new Blob([xml], { type: 'application/x-apple-aspen-config' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+function renderCountries() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  COUNTRIES.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'country-card';
+    card.innerHTML = `
+      <div class="flag-dot" style="background:${c.color}"></div>
+      <div class="country-name">${c.name}</div>
+    `;
+    card.onclick = () => {
+      const xml = buildMobileConfig(c.host, c.port, c.name);
+      downloadConfig(xml, `ShadowVPN-${c.name}.mobileconfig`);
+    };
+    grid.appendChild(card);
+  });
+}
+renderCountries();
 
 document.getElementById('customBtn').onclick = () => {
   const host = document.getElementById('host').value.trim();
   const port = document.getElementById('port').value.trim() || '8080';
-  const ssid = document.getElementById('ssid').value.trim();
-  if (!host || !ssid) { alert('Введи SSID и хост'); return; }
-  const xml = buildMobileConfig(host, port, ssid);
-  downloadConfig(xml, 'ShadowVPN.mobileconfig');
+  if (!host) { alert('Введи IP или хост'); return; }
+  const xml = buildMobileConfig(host, port, 'Custom');
+  downloadConfig(xml, 'ShadowVPN-Custom.mobileconfig');
 };
 
 document.getElementById('offBtn').onclick = () => {
   const xml = buildOffConfig();
   downloadConfig(xml, 'ShadowVPN-OFF.mobileconfig');
 };
-
-const PROXY_SOURCE_URL = 'https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/http/data.txt';
-const MAX_PROXIES_TO_CHECK = 15;
-
-let proxyResults = {};
-let checkCallbacks = {};
-
-window.onProxyCheckResult = function(id, alive, latencyMs) {
-  const cb = checkCallbacks[id];
-  if (cb) {
-    cb(alive, latencyMs);
-    delete checkCallbacks[id];
-  }
-};
-
-function checkProxyNative(id, host, port, callback) {
-  checkCallbacks[id] = callback;
-  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.proxyChecker) {
-    window.webkit.messageHandlers.proxyChecker.postMessage({ id, host, port: parseInt(port) });
-  } else {
-    setTimeout(() => callback(false, 0), 300);
-  }
-}
-
-function renderProxyList() {
-  const box = document.getElementById('proxyListBox');
-  const ids = Object.keys(proxyResults);
-  if (ids.length === 0) {
-    box.innerHTML = '<div class="empty-state">Нажми "Загрузить", чтобы получить список</div>';
-    return;
-  }
-  box.innerHTML = ids.map(id => {
-    const p = proxyResults[id];
-    let statusHtml = '';
-    if (p.status === 'pending') statusHtml = '<span class="proxy-status pending">ждёт</span>';
-    if (p.status === 'checking') statusHtml = '<span class="proxy-status checking">проверка…</span>';
-    if (p.status === 'alive') statusHtml = `<span class="proxy-status alive" data-id="${id}">✓ ${p.latency}мс</span>`;
-    if (p.status === 'dead') statusHtml = '<span class="proxy-status dead">✕ мёртв</span>';
-    return `<div class="proxy-row">
-      <span class="proxy-host">${p.host}:${p.port}</span>
-      ${statusHtml}
-    </div>`;
-  }).join('');
-
-  box.querySelectorAll('.proxy-status.alive').forEach(el => {
-    el.onclick = () => {
-      const id = el.getAttribute('data-id');
-      const p = proxyResults[id];
-      document.getElementById('host').value = p.host;
-      document.getElementById('port').value = p.port;
-    };
-  });
-}
-
-async function fetchAndCheckProxies() {
-  const fetchBtn = document.getElementById('fetchBtn');
-  fetchBtn.disabled = true;
-  fetchBtn.textContent = '⏳ Загружаю список…';
-  proxyResults = {};
-  renderProxyList();
-
-  let lines = [];
-  try {
-    const res = await fetch(PROXY_SOURCE_URL);
-    const text = await res.text();
-    lines = text.split('\n').map(l => l.trim()).filter(l => l.includes(':'));
-  } catch (e) {
-    document.getElementById('proxyListBox').innerHTML =
-      '<div class="empty-state">Не удалось загрузить список. Проверь интернет.</div>';
-    fetchBtn.disabled = false;
-    fetchBtn.textContent = '🔄 Загрузить и проверить список';
-    return;
-  }
-
-  const shuffled = lines.sort(() => Math.random() - 0.5).slice(0, MAX_PROXIES_TO_CHECK);
-
-  shuffled.forEach((line, idx) => {
-    const [host, port] = line.split(':');
-    if (!host || !port) return;
-    const id = 'p' + idx + '_' + Date.now();
-    proxyResults[id] = { host, port, status: 'pending' };
-  });
-  renderProxyList();
-
-  fetchBtn.textContent = '⏳ Проверяю прокси…';
-
-  const ids = Object.keys(proxyResults);
-  for (const id of ids) {
-    proxyResults[id].status = 'checking';
-    renderProxyList();
-    const p = proxyResults[id];
-    await new Promise(resolve => {
-      checkProxyNative(id, p.host, p.port, (alive, latencyMs) => {
-        proxyResults[id].status = alive ? 'alive' : 'dead';
-        proxyResults[id].latency = latencyMs;
-        renderProxyList();
-        resolve();
-      });
-    });
-  }
-
-  fetchBtn.disabled = false;
-  fetchBtn.textContent = '🔄 Загрузить и проверить список';
-}
-
-document.getElementById('fetchBtn').onclick = fetchAndCheckProxies;
 </script>
 </body>
 </html>
