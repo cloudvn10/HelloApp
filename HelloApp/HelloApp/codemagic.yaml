@@ -1,0 +1,28 @@
+workflows:
+  ios-unsigned:
+    name: iOS Unsigned Build
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+    scripts:
+      - name: Install XcodeGen
+        script: brew install xcodegen
+      - name: Generate Xcode project
+        script: xcodegen generate
+      - name: Build unsigned app
+        script: |
+          xcodebuild -project HelloApp.xcodeproj \
+            -scheme HelloApp \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            -derivedDataPath build \
+            clean build
+      - name: Package IPA
+        script: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/HelloApp.app Payload/
+          zip -r HelloApp.ipa Payload
+    artifacts:
+      - HelloApp.ipa
