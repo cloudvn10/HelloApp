@@ -11,8 +11,8 @@ workflows:
         script: xcodegen generate
       - name: Build unsigned app
         script: |
-          xcodebuild -project HelloApp.xcodeproj \
-            -scheme HelloApp \
+          xcodebuild -project ShadowVPN.xcodeproj \
+            -scheme ShadowVPN \
             -sdk iphoneos \
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO \
@@ -22,7 +22,7 @@ workflows:
       - name: Package IPA
         script: |
           mkdir -p Payload
-          cp -r build/Build/Products/Release-iphoneos/HelloApp.app Payload/
-          zip -r HelloApp.ipa Payload
+          cp -r build/Build/Products/Release-iphoneos/ShadowVPN.app Payload/
+          zip -r ShadowVPN.ipa Payload
     artifacts:
-      - HelloApp.ipa
+      - ShadowVPN.ipa
