@@ -42,17 +42,16 @@
         <input type="text" class="input-field" id="ssid" placeholder="Имя Wi-Fi (SSID)">
     </div>
     
-    <button class="btn" id="customBtn">Создать профиль для Wi-Fi</button>
-    <button class="btn btn-off" id="offBtn">Отключить прокси</button>
+    <button class="btn" id="customBtn">⚡ Включить прокси</button>
+    <button class="btn btn-off" id="offBtn">Остановить прокси</button>
 
     <hr style="border-color: #1a1a1a; margin: 10px 0;">
 
-    <button class="btn" id="fetchBtn" style="background: #333; color: #fff;">Загрузить прокси с GitHub</button>
+    <button class="btn" id="fetchBtn" style="background: #333; color: #fff;">Загрузить список прокси с GitHub</button>
     <div id="proxyList"></div>
 </div>
 
 <script>
-// Генератор UUID
 function makeUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -62,7 +61,6 @@ function makeUUID() {
 
 function escapeXML(str) { return String(str).replace(/[<>&'"]/g, function(c) { if(c === '<') return '&lt;'; if(c === '>') return '&gt;'; if(c === '&') return '&amp;'; if(c === "'") return '&apos;'; return '&quot;'; }); }
 
-// Логика создания Wi-Fi профиля
 function buildMobileConfig(host, port, label, ssid) {
     const payloadUUID = makeUUID();
     const safeLabel = escapeXML(label);
@@ -106,9 +104,11 @@ function buildOffConfig() {
 </dict></plist>`;
 }
 
-function downloadConfig(xml, filename) {
+// ВАЖНО: Мы не скачиваем файл, а создаем ссылку и отправляем в Safari
+function openProfile(xml) {
     const base64 = btoa(unescape(encodeURIComponent(xml)));
     const dataUrl = 'data:application/x-apple-aspen-config;base64,' + base64;
+    // Это откроет Safari и сразу вызовет окно "Установить профиль"
     window.location.href = dataUrl;
 }
 
@@ -117,19 +117,19 @@ document.getElementById('customBtn').onclick = () => {
     const port = document.getElementById('port').value.trim() || '8080';
     const ssid = document.getElementById('ssid').value.trim();
     if (!host || !ssid) { alert('Введи SSID и хост'); return; }
-    downloadConfig(buildMobileConfig(host, port, 'Custom', ssid), 'ShadowVPN.mobileconfig');
+    openProfile(buildMobileConfig(host, port, 'Custom', ssid));
 };
 
 document.getElementById('offBtn').onclick = () => {
-    downloadConfig(buildOffConfig(), 'ShadowVPN-OFF.mobileconfig');
+    openProfile(buildOffConfig());
 };
 
-// ======= ЛОГИКА ЗАГРУЗКИ СПИСКА ПРОКСИ =======
+// ======= СПИСОК ПРОКСИ =======
 const proxyListEl = document.getElementById('proxyList');
 const fetchBtn = document.getElementById('fetchBtn');
 
 fetchBtn.onclick = async () => {
-    proxyListEl.innerHTML = '<div style="color: #888;">Загрузка списка...</div>';
+    proxyListEl.innerHTML = '<div style="color: #888;">Загрузка...</div>';
     fetchBtn.disabled = true;
     
     try {
@@ -145,19 +145,18 @@ fetchBtn.onclick = async () => {
 
             const card = document.createElement('div');
             card.className = 'proxy-card';
-            
             card.innerHTML = `<span>${host}:${port}</span>`;
 
             card.onclick = () => {
                 document.getElementById('host').value = host;
                 document.getElementById('port').value = port;
-                alert('Данные вставлены! Теперь введи SSID и нажми "Создать профиль"');
+                alert('IP и Порт вставлены! Теперь введи SSID и жми "⚡ Включить прокси"');
             };
 
             proxyListEl.appendChild(card);
         });
     } catch(e) {
-        proxyListEl.innerHTML = '<div style="color: red;">Ошибка загрузки списка. Проверь интернет.</div>';
+        proxyListEl.innerHTML = '<div style="color: red;">Ошибка загрузки списка.</div>';
     } finally {
         fetchBtn.disabled = false;
     }
