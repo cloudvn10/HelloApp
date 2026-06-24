@@ -6,7 +6,7 @@ targets:
     type: application
     platform: iOS
     deploymentTarget: "14.0"
-    sources: [HelloApp]
+    sources: [.]
     info:
       path: HelloApp/Info.plist
     settings:
