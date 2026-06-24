@@ -1,16 +1,20 @@
-name: HelloApp
+name: ShadowVPN
 options:
-  bundleIdPrefix: com.test
+  bundleIdPrefix: com.shadowvpn
+  deploymentTarget:
+    iOS: "14.0"
 targets:
-  HelloApp:
+  ShadowVPN:
     type: application
     platform: iOS
-    deploymentTarget: "14.0"
-    sources: [HelloApp]
+    sources: [ShadowVPN]
     info:
-      path: HelloApp/Info.plist
+      path: ShadowVPN/Info.plist
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.test.helloapp
+        PRODUCT_BUNDLE_IDENTIFIER: com.shadowvpn.app
+        PRODUCT_NAME: ShadowVPN
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
         CODE_SIGNING_ALLOWED: NO
         CODE_SIGNING_REQUIRED: NO
