@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ShadowVPN</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    background: #060606;
+    color: #f2f2f0;
+    font-family: -apple-system, 'Inter', 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .container {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 0 0 40px;
+  }
+  .header {
+    padding: 32px 24px 16px;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .logo { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: #c8ff3d; }
+  .subtitle {
+    font-size: 10px;
+    color: #5c5c5c;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  .main-content {
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .info-box {
+    background: #0d0d0d;
+    border: 1px solid #1f1f1f;
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #9a9a9a;
+  }
+  .info-box b { color: #c8ff3d; }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #5c5c5c;
+    padding-left: 2px;
+  }
+
+  .countries-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .country-card {
+    background: #0d0d0d;
+    border: 1px solid #1f1f1f;
+    border-radius: 14px;
+    padding: 10px 8px 8px;
+    text-align: center;
+    -webkit-user-select: none;
+  }
+  .country-card:active { transform: scale(0.96); }
+  .flag-dot {
+    width: 100%;
+    aspect-ratio: 3/2;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .country-name {
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 6px;
+    color: #9a9a9a;
+  }
+  .country-link { text-decoration: none; display: block; }
+
+  .input-row { display: flex; gap: 8px; }
+  .input-field {
+    flex: 1;
+    background: #0d0d0d;
+    border: 1px solid #1f1f1f;
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: #f2f2f0;
+    font-size: 14px;
+    outline: none;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .input-field.small { max-width: 84px; }
+  .input-field:focus { border-color: #c8ff3d; }
+
+  .btn {
+    background: #c8ff3d;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    color: #060606;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+  }
+  .btn:active { transform: scale(0.98); }
+
+  .btn-off {
+    background: #1a1a1a;
+    color: #ff4d4d;
+    border: 1px solid #2a2a2a;
+  }
+
+  .steps {
+    background: #0d0d0d;
+    border: 1px solid #1f1f1f;
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #9a9a9a;
+  }
+  .steps b { color: #f2f2f0; }
+  .steps ol { padding-left: 18px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">SHADOW<span>VPN</span></div>
+    <div class="subtitle">iOS Proxy Profile</div>
+  </div>
+
+  <div class="main-content">
+
+    <div class="info-box">
+      На iPhone прокси работает через системный профиль, а не через приложение.
+      Тапни страну — скачается файл <b>.mobileconfig</b> — поставь его в Настройках.
+    </div>
+
+    <div class="section-label">Локации</div>
+    <div class="countries-grid" id="grid"></div>
+
+    <div class="section-label">Свой сервер</div>
+    <div class="input-row">
+      <input type="text" class="input-field" id="host" placeholder="IP или хост">
+      <input type="text" class="input-field small" id="port" placeholder="Порт" value="8080">
+    </div>
+    <button class="btn" id="customBtn">Создать профиль</button>
+
+    <button class="btn btn-off" id="offBtn">Отключить прокси (профиль OFF)</button>
+
+    <div class="steps">
+      <b>Как поставить профиль:</b>
+      <ol>
+        <li>Тапни страну или "Создать профиль"</li>
+        <li>Safari спросит — разреши скачать</li>
+        <li>Настройки → Загружен профиль (вверху)</li>
+        <li>Установить → введи код-пароль → Установить</li>
+        <li>Готово — прокси работает на всём телефоне</li>
+      </ol>
+      Чтобы выключить — Настройки → Основные → VPN и управление устройством →
+      найди профиль → Удалить профиль. Или поставь "Отключить прокси" сверху.
+    </div>
+
+  </div>
+</div>
+
+<script>
+const COUNTRIES = [
+  { id: 'uk', name: 'UK', host: '86.53.163.185', port: 10001, color: '#012169' },
+  { id: 'usa', name: 'US', host: '47.79.119.13', port: 8080, color: '#3c3b6e' },
+  { id: 'nl', name: 'NL', host: '138.124.113.102', port: 7443, color: 'linear-gradient(180deg,#ae1c28 33%,white 33%,white 66%,#21468b 66%)' },
+  { id: 'fr', name: 'FR', host: '40.89.145.14', port: 80, color: 'linear-gradient(90deg,#002395 33%,white 33%,white 66%,#ed2939 66%)' },
+  { id: 'de', name: 'DE', host: '138.201.198.53', port: 80, color: 'linear-gradient(180deg,#000 33%,#dd0000 33%,#dd0000 66%,#ffce00 66%)' },
+  { id: 'pl', name: 'PL', host: '178.212.144.7', port: 80, color: 'linear-gradient(180deg,white 50%,#dc143c 50%)' }
+];
+
+function escapeXML(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function buildMobileConfig(host, port, label) {
+  const payloadUUID = crypto.randomUUID();
+  const profileUUID = crypto.randomUUID();
+  const safeLabel = escapeXML(label);
+  const safeHost = escapeXML(host);
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>PayloadType</key>
+      <string>com.apple.proxy.http.global</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+      <key>PayloadIdentifier</key>
+      <string>com.shadowvpn.proxy.${payloadUUID}</string>
+      <key>PayloadUUID</key>
+      <string>${payloadUUID}</string>
+      <key>PayloadDisplayName</key>
+      <string>ShadowVPN Proxy - ${safeLabel}</string>
+      <key>ProxyType</key>
+      <string>Manual</string>
+      <key>ProxyServer</key>
+      <string>${safeHost}</string>
+      <key>ProxyServerPort</key>
+      <integer>${parseInt(port)}</integer>
+      <key>ProxyCaptiveLoginAllowed</key>
+      <false/>
+    </dict>
+  </array>
+  <key>PayloadDisplayName</key>
+  <string>ShadowVPN - ${safeLabel}</string>
+  <key>PayloadIdentifier</key>
+  <string>com.shadowvpn.profile.${profileUUID}</string>
+  <key>PayloadRemovalDisallowed</key>
+  <false/>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadUUID</key>
+  <string>${profileUUID}</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+  <key>PayloadOrganization</key>
+  <string>ShadowVPN</string>
+  <key>PayloadDescription</key>
+  <string>Включает HTTP-прокси через ${safeHost}:${port}</string>
+</dict>
+</plist>`;
+}
+
+function buildOffConfig() {
+  const profileUUID = crypto.randomUUID();
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array></array>
+  <key>PayloadDisplayName</key>
+  <string>ShadowVPN - OFF</string>
+  <key>PayloadIdentifier</key>
+  <string>com.shadowvpn.profile.off.${profileUUID}</string>
+  <key>PayloadRemovalDisallowed</key>
+  <false/>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadUUID</key>
+  <string>${profileUUID}</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+  <key>PayloadOrganization</key>
+  <string>ShadowVPN</string>
+  <key>PayloadDescription</key>
+  <string>Удали старый профиль вручную через Настройки, этот файл просто заглушка</string>
+</dict>
+</plist>`;
+}
+
+function downloadConfig(xml, filename) {
+  const blob = new Blob([xml], { type: 'application/x-apple-aspen-config' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function renderCountries() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  COUNTRIES.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'country-card';
+    card.innerHTML = `
+      <div class="flag-dot" style="background:${c.color}"></div>
+      <div class="country-name">${c.name}</div>
+    `;
+    card.onclick = () => {
+      const xml = buildMobileConfig(c.host, c.port, c.name);
+      downloadConfig(xml, `ShadowVPN-${c.name}.mobileconfig`);
+    };
+    grid.appendChild(card);
+  });
+}
+renderCountries();
+
+document.getElementById('customBtn').onclick = () => {
+  const host = document.getElementById('host').value.trim();
+  const port = document.getElementById('port').value.trim() || '8080';
+  if (!host) { alert('Введи IP или хост'); return; }
+  const xml = buildMobileConfig(host, port, 'Custom');
+  downloadConfig(xml, 'ShadowVPN-Custom.mobileconfig');
+};
+
+document.getElementById('offBtn').onclick = () => {
+  const xml = buildOffConfig();
+  downloadConfig(xml, 'ShadowVPN-OFF.mobileconfig');
+};
+</script>
+</body>
+</html>
