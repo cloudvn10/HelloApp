@@ -307,13 +307,11 @@ function renderCountries() {
 }
 renderCountries();
 
-document.getElementById('customBtn').onclick = () => {
-  const host = document.getElementById('host').value.trim();
-  const port = document.getElementById('port').value.trim() || '8080';
-  if (!host) { alert('Введи IP или хост'); return; }
-  const xml = buildMobileConfig(host, port, 'Custom');
-  downloadConfig(xml, 'ShadowVPN-Custom.mobileconfig');
-};
+function downloadConfig(xml, filename) {
+  const base64 = btoa(unescape(encodeURIComponent(xml)));
+  const dataUrl = 'data:application/x-apple-aspen-config;base64,' + base64;
+  window.location.href = dataUrl;
+}
 
 document.getElementById('offBtn').onclick = () => {
   const xml = buildOffConfig();
