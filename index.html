@@ -1,169 +1,220 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, sans-serif; background: #060606; color: #f2f2f0; padding: 20px; }
-        .container { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
-        .logo { font-size: 24px; font-weight: 800; margin-bottom: 10px; text-align: center; }
-        .logo span { color: #c8ff3d; }
-        .input-field { width: 100%; background: #0d0d0d; border: 1px solid #1f1f1f; border-radius: 10px; padding: 12px; color: white; font-size: 16px; }
-        .row { display: flex; gap: 10px; }
-        .btn { border: none; border-radius: 10px; padding: 12px; font-weight: 800; cursor: pointer; flex: 1; }
-        .btn-main { background: #c8ff3d; color: #060606; }
-        .btn-sec { background: #1f1f1f; color: white; }
-        .fav-list { margin-top: 20px; border-top: 1px solid #1f1f1f; padding-top: 10px; }
-        .fav-item { background: #121212; padding: 10px; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, sans-serif; background: #060606; color: #f2f2f0; padding: 20px; }
+.container { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.logo { font-size: 24px; font-weight: 800; margin-bottom: 10px; text-align: center; }
+.logo span { color: #c8ff3d; }
+.input-field { width: 100%; background: #0d0d0d; border: 1px solid #1f1f1f; border-radius: 10px; padding: 12px; color: white; font-size: 16px; }
+.row { display: flex; gap: 10px; }
+.btn { border: none; border-radius: 10px; padding: 12px; font-weight: 800; cursor: pointer; flex: 1; }
+.btn-main { background: #c8ff3d; color: #060606; }
+.btn-sec { background: #1f1f1f; color: white; }
+.fav-list { margin-top: 20px; border-top: 1px solid #1f1f1f; padding-top: 10px; }
+.fav-item { background: #121212; padding: 10px; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+</style>
 </head>
 <body>
 <div class="container">
-    <div class="logo">SHADOW<span>PROXY</span></div>
-
-    <input type="text" class="input-field" id="host" placeholder="IP">
-    <input type="text" class="input-field" id="port" placeholder="Порт">
-    <input type="text" class="input-field" id="ssid" placeholder="Wi-Fi SSID">
-    <input type="password" class="input-field" id="pass" placeholder="Пароль от Wi-Fi">
-
-    <div class="row">
-        <button class="btn btn-main" onclick="connect()">⚡ Подключить</button>
-        <button class="btn btn-sec" onclick="checkProxy()">🔍 Тест</button>
-    </div>
-    <button class="btn btn-sec" onclick="saveToFavorites()">⭐ В избранное</button>
-    <button class="btn" style="background:#ff3d3d; color:white;" onclick="disconnect()">❌ Отключить (Сброс)</button>
-
-    <div class="fav-list" id="favList"></div>
+<div class="logo">SHADOW<span>PROXY</span></div>
+<input type="text" class="input-field" id="host" placeholder="IP">
+<input type="text" class="input-field" id="port" placeholder="Порт">
+<input type="text" class="input-field" id="ssid" placeholder="Wi-Fi SSID">
+<input type="password" class="input-field" id="pass" placeholder="Пароль от Wi-Fi">
+<div class="row">
+<button class="btn btn-main" onclick="connect()">⚡ Подключить</button>
+<button class="btn btn-sec" onclick="checkProxy()">🔍 Тест</button>
+</div>
+<button class="btn btn-sec" onclick="saveToFavorites()">⭐ В избранное</button>
+<button class="btn" style="background:#ff3d3d; color:white;" onclick="disconnect()">❌ Отключить (Сброс)</button>
+<div class="fav-list" id="favList"></div>
 </div>
 
 <script>
-    // --- Логика сохранения ---
-    const inputs = ['host', 'port', 'ssid', 'pass'];
-    inputs.forEach(id => {
-        document.getElementById(id).value = localStorage.getItem(id) || '';
-        document.getElementById(id).oninput = () => localStorage.setItem(id, document.getElementById(id).value);
-    });
+// Фиксированный UUID профиля - чтобы iOS заменял старый профиль, а не копил новые
+const PROFILE_UUID = "ABCDEF12-3456-7890-ABCD-EF1234567890";
+const PROFILE_IDENTIFIER = "com.shadowvpn.profile";
 
-    function makeUUID() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { var r = Math.random()*16|0, v = c=='x'?r:r&0x3|0x8; return v.toString(16); }).toUpperCase(); }
+const $ = id => document.getElementById(id);
 
-    // --- Проверка (тест прокси) ---
-    async function checkProxy() {
-        const host = document.getElementById('host').value;
-        const port = document.getElementById('port').value;
-        alert("Проверка...");
-        const img = new Image();
-        img.onload = () => alert("✅ Прокси живой!");
-        img.onerror = () => alert("❌ Прокси не отвечает!");
-        img.src = `http://${host}:${port}/favicon.ico?${Date.now()}`;
-        setTimeout(() => { if(img.complete === false) alert("⏳ Тайм-аут (сервер не ответил)"); }, 3000);
-    }
+// --- Логика сохранения полей ввода ---
+const inputs = ['host', 'port', 'ssid', 'pass'];
+inputs.forEach(id => {
+  $(id).value = localStorage.getItem(id) || '';
+  $(id).oninput = () => localStorage.setItem(id, $(id).value);
+});
 
-    // --- Избранное ---
-    function saveToFavorites() {
-        const data = { h: host.value, p: port.value, s: ssid.value, ps: pass.value };
-        const favs = JSON.parse(localStorage.getItem('favs') || '[]');
-        favs.push(data);
-        localStorage.setItem('favs', JSON.stringify(favs));
-        renderFavs();
-    }
+function makeUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  }).toUpperCase();
+}
 
-    function renderFavs() {
-        const list = document.getElementById('favList');
-        const favs = JSON.parse(localStorage.getItem('favs') || '[]');
-        list.innerHTML = favs.map((f, i) => `
-            <div class="fav-item" onclick="loadFav(${i})">
-                <span>${f.h}:${f.p}</span>
-                <button style="background:none; border:none; color:red;" onclick="event.stopPropagation(); removeFav(${i})">X</button>
-            </div>
-        `).join('');
-    }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
 
-    function loadFav(i) {
-        const favs = JSON.parse(localStorage.getItem('favs'));
-        document.getElementById('host').value = favs[i].h;
-        document.getElementById('port').value = favs[i].p;
-        document.getElementById('ssid').value = favs[i].s;
-        document.getElementById('pass').value = favs[i].ps;
-        inputs.forEach(id => localStorage.setItem(id, document.getElementById(id).value));
-    }
+// --- Проверка (тест прокси) ---
+function checkProxy() {
+  const host = $('host').value;
+  const port = $('port').value;
+  if (!host || !port) { alert("Заполни IP и порт"); return; }
 
-    function removeFav(i) {
-        let favs = JSON.parse(localStorage.getItem('favs'));
-        favs.splice(i, 1);
-        localStorage.setItem('favs', JSON.stringify(favs));
-        renderFavs();
-    }
+  const img = new Image();
+  let done = false;
 
-    // --- Отправка в Swift ---
-    function sendToSwift(xml) {
-        if (window.webkit?.messageHandlers?.mobileConfigHandler) {
-            window.webkit.messageHandlers.mobileConfigHandler.postMessage(xml);
-        } else {
-            alert("Ошибка: Swift мост не найден");
-        }
-    }
+  const timer = setTimeout(() => {
+    if (!done) { done = true; alert("⏳ Тайм-аут (сервер не ответил)"); }
+  }, 3000);
 
-    // --- Генерация XML (с PayloadVersion) ---
-    function connect() {
-        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+  img.onload = () => {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    alert("✅ Прокси живой!");
+  };
+  img.onerror = () => {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    alert("❌ Прокси не отвечает!");
+  };
+
+  img.src = `http://${host}:${port}/favicon.ico?${Date.now()}`;
+}
+
+// --- Избранное ---
+function saveToFavorites() {
+  const data = {
+    h: $('host').value,
+    p: $('port').value,
+    s: $('ssid').value,
+    ps: $('pass').value
+  };
+  if (!data.h || !data.p) { alert("Заполни IP и порт"); return; }
+
+  const favs = JSON.parse(localStorage.getItem('favs') || '[]');
+  favs.push(data);
+  localStorage.setItem('favs', JSON.stringify(favs));
+  renderFavs();
+}
+
+function renderFavs() {
+  const list = $('favList');
+  const favs = JSON.parse(localStorage.getItem('favs') || '[]');
+  list.innerHTML = favs.map((f, i) => `
+    <div class="fav-item" onclick="loadFav(${i})">
+      <span>${escapeHtml(f.h)}:${escapeHtml(f.p)}</span>
+      <button style="background:none; border:none; color:red;" onclick="event.stopPropagation(); removeFav(${i})">X</button>
+    </div>
+  `).join('');
+}
+
+function loadFav(i) {
+  const favs = JSON.parse(localStorage.getItem('favs') || '[]');
+  if (!favs[i]) return;
+  $('host').value = favs[i].h;
+  $('port').value = favs[i].p;
+  $('ssid').value = favs[i].s;
+  $('pass').value = favs[i].ps;
+  inputs.forEach(id => localStorage.setItem(id, $(id).value));
+}
+
+function removeFav(i) {
+  let favs = JSON.parse(localStorage.getItem('favs') || '[]');
+  favs.splice(i, 1);
+  localStorage.setItem('favs', JSON.stringify(favs));
+  renderFavs();
+}
+
+// --- Отправка в Swift ---
+function sendToSwift(xml) {
+  if (window.webkit?.messageHandlers?.mobileConfigHandler) {
+    window.webkit.messageHandlers.mobileConfigHandler.postMessage(xml);
+  } else {
+    alert("Ошибка: Swift мост не найден");
+  }
+}
+
+// --- Генерация XML (PayloadUUID верхнего уровня фиксирован) ---
+function connect() {
+  const host = $('host').value;
+  const port = $('port').value;
+  const ssid = $('ssid').value;
+  const pass = $('pass').value;
+
+  if (!host || !port || !ssid) { alert("Заполни IP, порт и SSID"); return; }
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>PayloadDisplayName</key><string>ShadowVPN</string>
-    <key>PayloadIdentifier</key><string>com.shadowvpn.profile</string>
-    <key>PayloadType</key><string>Configuration</string>
-    <key>PayloadUUID</key><string>${makeUUID()}</string>
-    <key>PayloadVersion</key><integer>1</integer>
-    <key>PayloadContent</key>
-    <array>
-        <dict>
-            <key>PayloadType</key><string>com.apple.wifi.managed</string>
-            <key>PayloadVersion</key><integer>1</integer>
-            <key>PayloadIdentifier</key><string>com.shadowvpn.wifi.${makeUUID()}</string>
-            <key>PayloadUUID</key><string>${makeUUID()}</string>
-            <key>SSID_STR</key><string>${ssid.value}</string>
-            <key>EncryptionType</key><string>WPA2</string>
-            <key>Password</key><string>${pass.value}</string>
-            <key>ProxyType</key><string>Manual</string>
-            <key>ProxyServer</key><string>${host.value}</string>
-            <key>ProxyServerPort</key><integer>${port.value}</integer>
-        </dict>
-    </array>
+<key>PayloadDisplayName</key><string>ShadowVPN</string>
+<key>PayloadIdentifier</key><string>${PROFILE_IDENTIFIER}</string>
+<key>PayloadType</key><string>Configuration</string>
+<key>PayloadUUID</key><string>${PROFILE_UUID}</string>
+<key>PayloadVersion</key><integer>1</integer>
+<key>PayloadContent</key>
+<array>
+<dict>
+<key>PayloadType</key><string>com.apple.wifi.managed</string>
+<key>PayloadVersion</key><integer>1</integer>
+<key>PayloadIdentifier</key><string>com.shadowvpn.wifi.${makeUUID()}</string>
+<key>PayloadUUID</key><string>${makeUUID()}</string>
+<key>SSID_STR</key><string>${ssid}</string>
+<key>EncryptionType</key><string>WPA2</string>
+<key>Password</key><string>${pass}</string>
+<key>ProxyType</key><string>Manual</string>
+<key>ProxyServer</key><string>${host}</string>
+<key>ProxyServerPort</key><integer>${port}</integer>
+</dict>
+</array>
 </dict>
 </plist>`;
-        sendToSwift(xml);
-    }
+  sendToSwift(xml);
+}
 
-    function disconnect() {
-        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+function disconnect() {
+  const ssid = $('ssid').value;
+  const pass = $('pass').value;
+
+  if (!ssid) { alert("Заполни SSID"); return; }
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>PayloadDisplayName</key><string>ShadowVPN OFF</string>
-    <key>PayloadIdentifier</key><string>com.shadowvpn.profile</string>
-    <key>PayloadType</key><string>Configuration</string>
-    <key>PayloadUUID</key><string>${makeUUID()}</string>
-    <key>PayloadVersion</key><integer>1</integer>
-    <key>PayloadContent</key>
-    <array>
-        <dict>
-            <key>PayloadType</key><string>com.apple.wifi.managed</string>
-            <key>PayloadVersion</key><integer>1</integer>
-            <key>PayloadIdentifier</key><string>com.shadowvpn.wifi.${makeUUID()}</string>
-            <key>PayloadUUID</key><string>${makeUUID()}</string>
-            <key>SSID_STR</key><string>${ssid.value}</string>
-            <key>EncryptionType</key><string>WPA2</string>
-            <key>Password</key><string>${pass.value}</string>
-            <key>ProxyType</key><string>None</string>
-        </dict>
-    </array>
+<key>PayloadDisplayName</key><string>ShadowVPN OFF</string>
+<key>PayloadIdentifier</key><string>${PROFILE_IDENTIFIER}</string>
+<key>PayloadType</key><string>Configuration</string>
+<key>PayloadUUID</key><string>${PROFILE_UUID}</string>
+<key>PayloadVersion</key><integer>1</integer>
+<key>PayloadContent</key>
+<array>
+<dict>
+<key>PayloadType</key><string>com.apple.wifi.managed</string>
+<key>PayloadVersion</key><integer>1</integer>
+<key>PayloadIdentifier</key><string>com.shadowvpn.wifi.${makeUUID()}</string>
+<key>PayloadUUID</key><string>${makeUUID()}</string>
+<key>SSID_STR</key><string>${ssid}</string>
+<key>EncryptionType</key><string>WPA2</string>
+<key>Password</key><string>${pass}</string>
+<key>ProxyType</key><string>None</string>
+</dict>
+</array>
 </dict>
 </plist>`;
-        sendToSwift(xml);
-    }
+  sendToSwift(xml);
+}
 
-    window.onload = renderFavs;
+window.onload = renderFavs;
 </script>
 </body>
 </html>
