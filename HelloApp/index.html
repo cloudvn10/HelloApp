@@ -70,7 +70,7 @@
     color: #f2f2f0;
     font-size: 14px;
     outline: none;
-    font-family: 'Courier New', monospace;
+    font-family: 'JetBrains Mono', monospace;
   }
   .input-field.small { max-width: 84px; }
   .input-field:focus { border-color: #c8ff3d; }
@@ -105,6 +105,7 @@
     border: 1px solid #2a2a2a;
   }
 
+  /* ---- proxy checker list ---- */
   .proxy-list-box {
     background: #0d0d0d;
     border: 1px solid #1f1f1f;
@@ -127,7 +128,7 @@
     border: 1px solid #1f1f1f;
     margin-bottom: 6px;
     font-size: 12px;
-    font-family: 'Courier New', monospace;
+    font-family: 'JetBrains Mono', monospace;
   }
   .proxy-row:last-child { margin-bottom: 0; }
   .proxy-host { color: #d0d0d0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -139,10 +140,10 @@
     padding: 3px 8px;
     border-radius: 6px;
   }
-  .proxy-status.pending  { background: #2a2a2a; color: #8a8a8a; }
+  .proxy-status.pending { background: #2a2a2a; color: #8a8a8a; }
   .proxy-status.checking { background: #2a2a2a; color: #c8ff3d; }
-  .proxy-status.alive    { background: rgba(200,255,61,0.15); color: #c8ff3d; cursor: pointer; }
-  .proxy-status.dead     { background: rgba(255,77,77,0.12); color: #ff4d4d; }
+  .proxy-status.alive { background: rgba(200,255,61,0.15); color: #c8ff3d; cursor: pointer; }
+  .proxy-status.dead { background: rgba(255,77,77,0.12); color: #ff4d4d; }
 
   .empty-state {
     text-align: center;
@@ -228,10 +229,13 @@ function makeUUID() {
 }
 
 const FIXED_PROFILE_UUID = "a1b2c3d4-0000-4000-8000-000000000001";
-const FIXED_PROFILE_ID   = "com.shadowvpn.profile.main";
+const FIXED_PROFILE_ID = "com.shadowvpn.profile.main";
 
 function buildMobileConfig(host, port, ssid) {
   const payloadUUID = makeUUID();
+  const safeHost = escapeXML(host);
+  const safeSsid = escapeXML(ssid);
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -250,13 +254,13 @@ function buildMobileConfig(host, port, ssid) {
       <key>PayloadDisplayName</key>
       <string>ShadowVPN Wi-Fi</string>
       <key>SSID_STR</key>
-      <string>${escapeXML(ssid)}</string>
+      <string>${safeSsid}</string>
       <key>EncryptionType</key>
       <string>WPA2</string>
       <key>ProxyType</key>
       <string>Manual</string>
       <key>ProxyServer</key>
-      <string>${escapeXML(host)}</string>
+      <string>${safeHost}</string>
       <key>ProxyServerPort</key>
       <integer>${parseInt(port)}</integer>
     </dict>
@@ -276,7 +280,7 @@ function buildMobileConfig(host, port, ssid) {
   <key>PayloadOrganization</key>
   <string>ShadowVPN</string>
   <key>PayloadDescription</key>
-  <string>Прокси ${escapeXML(host)}:${port} для сети ${escapeXML(ssid)}</string>
+  <string>Прокси ${safeHost}:${port} для сети ${safeSsid}</string>
 </dict>
 </plist>`;
 }
@@ -308,9 +312,10 @@ function buildOffConfig() {
 </plist>`;
 }
 
-function downloadConfig(xml) {
+function downloadConfig(xml, filename) {
   const base64 = btoa(unescape(encodeURIComponent(xml)));
-  window.location.href = 'data:application/x-apple-aspen-config;base64,' + base64;
+  const dataUrl = 'data:application/x-apple-aspen-config;base64,' + base64;
+  window.location.href = dataUrl;
 }
 
 document.getElementById('customBtn').onclick = () => {
@@ -318,22 +323,21 @@ document.getElementById('customBtn').onclick = () => {
   const port = document.getElementById('port').value.trim() || '8080';
   const ssid = document.getElementById('ssid').value.trim();
   if (!host || !ssid) { alert('Введи SSID и хост'); return; }
-  downloadConfig(buildMobileConfig(host, port, ssid));
+  const xml = buildMobileConfig(host, port, ssid);
+  downloadConfig(xml, 'ShadowVPN.mobileconfig');
 };
 
 document.getElementById('offBtn').onclick = () => {
-  downloadConfig(buildOffConfig());
+  const xml = buildOffConfig();
+  downloadConfig(xml, 'ShadowVPN-OFF.mobileconfig');
 };
 
-/* ========== ПРОКСИ-ЧЕКЕР ========== */
-
 const PROXY_SOURCE_URL = 'https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/http/data.txt';
-const MAX_PROXIES = 15;
+const MAX_PROXIES_TO_CHECK = 15;
 
 let proxyResults = {};
 let checkCallbacks = {};
 
-// Swift вызывает эту функцию после реальной проверки
 window.onProxyCheckResult = function(id, alive, latencyMs) {
   const cb = checkCallbacks[id];
   if (cb) {
@@ -345,9 +349,8 @@ window.onProxyCheckResult = function(id, alive, latencyMs) {
 function checkProxyNative(id, host, port, callback) {
   checkCallbacks[id] = callback;
   if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.proxyChecker) {
-    window.webkit.messageHandlers.proxyChecker.postMessage({ id: id, host: host, port: parseInt(port) });
+    window.webkit.messageHandlers.proxyChecker.postMessage({ id, host, port: parseInt(port) });
   } else {
-    // Не в приложении (Safari) — нативного чекера нет
     setTimeout(() => callback(false, 0), 300);
   }
 }
@@ -361,17 +364,21 @@ function renderProxyList() {
   }
   box.innerHTML = ids.map(id => {
     const p = proxyResults[id];
-    let st = '';
-    if (p.status === 'pending')  st = '<span class="proxy-status pending">ждёт</span>';
-    if (p.status === 'checking') st = '<span class="proxy-status checking">проверка…</span>';
-    if (p.status === 'alive')    st = '<span class="proxy-status alive" data-id="' + id + '">✓ ' + p.latency + 'мс</span>';
-    if (p.status === 'dead')     st = '<span class="proxy-status dead">✕ мёртв</span>';
-    return '<div class="proxy-row"><span class="proxy-host">' + p.host + ':' + p.port + '</span>' + st + '</div>';
+    let statusHtml = '';
+    if (p.status === 'pending') statusHtml = '<span class="proxy-status pending">ждёт</span>';
+    if (p.status === 'checking') statusHtml = '<span class="proxy-status checking">проверка…</span>';
+    if (p.status === 'alive') statusHtml = `<span class="proxy-status alive" data-id="${id}">✓ ${p.latency}мс</span>`;
+    if (p.status === 'dead') statusHtml = '<span class="proxy-status dead">✕ мёртв</span>';
+    return `<div class="proxy-row">
+      <span class="proxy-host">${p.host}:${p.port}</span>
+      ${statusHtml}
+    </div>`;
   }).join('');
 
   box.querySelectorAll('.proxy-status.alive').forEach(el => {
     el.onclick = () => {
-      const p = proxyResults[el.getAttribute('data-id')];
+      const id = el.getAttribute('data-id');
+      const p = proxyResults[id];
       document.getElementById('host').value = p.host;
       document.getElementById('port').value = p.port;
     };
@@ -379,9 +386,9 @@ function renderProxyList() {
 }
 
 async function fetchAndCheckProxies() {
-  const btn = document.getElementById('fetchBtn');
-  btn.disabled = true;
-  btn.textContent = '⏳ Загружаю список…';
+  const fetchBtn = document.getElementById('fetchBtn');
+  fetchBtn.disabled = true;
+  fetchBtn.textContent = '⏳ Загружаю список…';
   proxyResults = {};
   renderProxyList();
 
@@ -392,24 +399,26 @@ async function fetchAndCheckProxies() {
     lines = text.split('\n').map(l => l.trim()).filter(l => l.includes(':'));
   } catch (e) {
     document.getElementById('proxyListBox').innerHTML =
-      '<div class="empty-state">Не удалось загрузить. Проверь интернет.</div>';
-    btn.disabled = false;
-    btn.textContent = '🔄 Загрузить и проверить список';
+      '<div class="empty-state">Не удалось загрузить список. Проверь интернет.</div>';
+    fetchBtn.disabled = false;
+    fetchBtn.textContent = '🔄 Загрузить и проверить список';
     return;
   }
 
-  const shuffled = lines.sort(() => Math.random() - 0.5).slice(0, MAX_PROXIES);
+  const shuffled = lines.sort(() => Math.random() - 0.5).slice(0, MAX_PROXIES_TO_CHECK);
+
   shuffled.forEach((line, idx) => {
-    const parts = line.split(':');
-    if (parts.length < 2) return;
+    const [host, port] = line.split(':');
+    if (!host || !port) return;
     const id = 'p' + idx + '_' + Date.now();
-    proxyResults[id] = { host: parts[0], port: parts[1], status: 'pending' };
+    proxyResults[id] = { host, port, status: 'pending' };
   });
   renderProxyList();
 
-  btn.textContent = '⏳ Проверяю прокси…';
+  fetchBtn.textContent = '⏳ Проверяю прокси…';
 
-  for (const id of Object.keys(proxyResults)) {
+  const ids = Object.keys(proxyResults);
+  for (const id of ids) {
     proxyResults[id].status = 'checking';
     renderProxyList();
     const p = proxyResults[id];
@@ -423,8 +432,8 @@ async function fetchAndCheckProxies() {
     });
   }
 
-  btn.disabled = false;
-  btn.textContent = '🔄 Загрузить и проверить список';
+  fetchBtn.disabled = false;
+  fetchBtn.textContent = '🔄 Загрузить и проверить список';
 }
 
 document.getElementById('fetchBtn').onclick = fetchAndCheckProxies;
