@@ -91,10 +91,16 @@ function buildOffConfig() {
 </dict></plist>`;
 }
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ: Отправка напрямую в Swift
 function openProfile(xml) {
-    const base64 = btoa(unescape(encodeURIComponent(xml)));
-    const dataUrl = 'data:application/x-apple-aspen-config;base64,' + base64;
-    window.location.href = dataUrl;
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mobileConfigHandler) {
+        window.webkit.messageHandlers.mobileConfigHandler.postMessage(xml);
+    } else {
+        // Фоллбэк, если открыть файл просто в Safari на Mac для теста
+        const base64 = btoa(unescape(encodeURIComponent(xml)));
+        const dataUrl = 'data:application/x-apple-aspen-config;base64,' + base64;
+        window.location.href = dataUrl;
+    }
 }
 
 document.getElementById('connectBtn').onclick = () => {
