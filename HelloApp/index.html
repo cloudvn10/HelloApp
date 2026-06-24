@@ -88,13 +88,68 @@
     text-align: center;
     text-decoration: none;
     display: block;
+    cursor: pointer;
   }
   .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.5; }
 
   .btn-off {
     background: #1a1a1a;
     color: #ff4d4d;
     border: 1px solid #2a2a2a;
+  }
+
+  .btn-secondary {
+    background: #1a1a1a;
+    color: #f2f2f0;
+    border: 1px solid #2a2a2a;
+  }
+
+  /* ---- proxy checker list ---- */
+  .proxy-list-box {
+    background: #0d0d0d;
+    border: 1px solid #1f1f1f;
+    border-radius: 14px;
+    padding: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .proxy-list-box::-webkit-scrollbar { width: 4px; }
+  .proxy-list-box::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+
+  .proxy-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: #131313;
+    border: 1px solid #1f1f1f;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .proxy-row:last-child { margin-bottom: 0; }
+  .proxy-host { color: #d0d0d0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .proxy-status {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .proxy-status.pending { background: #2a2a2a; color: #8a8a8a; }
+  .proxy-status.checking { background: #2a2a2a; color: #c8ff3d; }
+  .proxy-status.alive { background: rgba(200,255,61,0.15); color: #c8ff3d; cursor: pointer; }
+  .proxy-status.dead { background: rgba(255,77,77,0.12); color: #ff4d4d; }
+
+  .empty-state {
+    text-align: center;
+    color: #5c5c5c;
+    font-size: 12px;
+    padding: 16px 0;
   }
 
   .steps {
@@ -125,6 +180,12 @@
       На мобильном интернете и других сетях прокси не действует — это ограничение iOS, не баг.
     </div>
 
+    <div class="section-label">Бесплатные прокси (с GitHub)</div>
+    <button class="btn btn-secondary" id="fetchBtn">🔄 Загрузить и проверить список</button>
+    <div class="proxy-list-box" id="proxyListBox">
+      <div class="empty-state">Нажми "Загрузить", чтобы получить список</div>
+    </div>
+
     <div class="section-label">Wi-Fi сеть (SSID)</div>
     <div class="input-row">
       <input type="text" class="input-field" id="ssid" placeholder="Например HUAWEI-7">
@@ -142,14 +203,13 @@
     <div class="steps">
       <b>Как поставить профиль:</b>
       <ol>
-        <li>Заполни SSID, хост и порт, тапни "Создать профиль"</li>
-        <li>Откроется окно "Поделиться" — выбери "Сохранить в Файлы" (или сразу открой)</li>
-        <li>Настройки → сверху появится "Профиль загружен"</li>
-        <li>Установить → введи код-пароль → Установить</li>
+        <li>Загрузи список или впиши свой прокси, тапни на живой (или "Создать профиль")</li>
+        <li>Заполнится host/port — жми "Создать профиль"</li>
+        <li>Откроется окно "Поделиться" — выбери "Сохранить в Файлы"</li>
+        <li>Настройки → сверху появится "Профиль загружен" → Установить</li>
         <li>Прокси активен только когда ты на этой Wi-Fi сети</li>
       </ol>
-      Чтобы выключить — жми "Stop" выше и установи получившийся профиль тем же способом.
-      Он перезапишет текущий и снимет прокси.
+      Чтобы выключить — жми "Stop" и установи получившийся профиль тем же способом.
     </div>
 
   </div>
@@ -274,6 +334,122 @@ document.getElementById('offBtn').onclick = () => {
   const xml = buildOffConfig();
   downloadConfig(xml, 'ShadowVPN-OFF.mobileconfig');
 };
+
+// ===================== ПРОКСИ-ЧЕКЕР =====================
+// Список тянем с GitHub (через jsDelivr CDN — обновляется каждые 5 минут).
+// Реальную проверку "жив ли прокси" делает Swift через URLSession,
+// потому что обычный fetch() из JS не умеет ходить ЧЕРЕЗ указанный прокси —
+// это системная настройка, а не параметр запроса.
+
+const PROXY_SOURCE_URL = 'https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/protocols/http/data.txt';
+const MAX_PROXIES_TO_CHECK = 15;
+
+let proxyResults = {}; // id -> {host, port, status}
+let checkCallbacks = {};
+
+// Swift зовёт это после завершения реальной проверки конкретного прокси
+window.onProxyCheckResult = function(id, alive, latencyMs) {
+  const cb = checkCallbacks[id];
+  if (cb) {
+    cb(alive, latencyMs);
+    delete checkCallbacks[id];
+  }
+};
+
+function checkProxyNative(id, host, port, callback) {
+  checkCallbacks[id] = callback;
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.proxyChecker) {
+    window.webkit.messageHandlers.proxyChecker.postMessage({ id, host, port: parseInt(port) });
+  } else {
+    // На случай если открыли не в приложении, а в обычном Safari —
+    // нативного чекера нет, считаем недоступным сразу.
+    setTimeout(() => callback(false, 0), 300);
+  }
+}
+
+function renderProxyList() {
+  const box = document.getElementById('proxyListBox');
+  const ids = Object.keys(proxyResults);
+  if (ids.length === 0) {
+    box.innerHTML = '<div class="empty-state">Нажми "Загрузить", чтобы получить список</div>';
+    return;
+  }
+  box.innerHTML = ids.map(id => {
+    const p = proxyResults[id];
+    let statusHtml = '';
+    if (p.status === 'pending') statusHtml = '<span class="proxy-status pending">ждёт</span>';
+    if (p.status === 'checking') statusHtml = '<span class="proxy-status checking">проверка…</span>';
+    if (p.status === 'alive') statusHtml = `<span class="proxy-status alive" data-id="${id}">✓ ${p.latency}мс</span>`;
+    if (p.status === 'dead') statusHtml = '<span class="proxy-status dead">✕ мёртв</span>';
+    return `<div class="proxy-row">
+      <span class="proxy-host">${p.host}:${p.port}</span>
+      ${statusHtml}
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('.proxy-status.alive').forEach(el => {
+    el.onclick = () => {
+      const id = el.getAttribute('data-id');
+      const p = proxyResults[id];
+      document.getElementById('host').value = p.host;
+      document.getElementById('port').value = p.port;
+    };
+  });
+}
+
+async function fetchAndCheckProxies() {
+  const fetchBtn = document.getElementById('fetchBtn');
+  fetchBtn.disabled = true;
+  fetchBtn.textContent = '⏳ Загружаю список…';
+  proxyResults = {};
+  renderProxyList();
+
+  let lines = [];
+  try {
+    const res = await fetch(PROXY_SOURCE_URL);
+    const text = await res.text();
+    lines = text.split('\n').map(l => l.trim()).filter(l => l.includes(':'));
+  } catch (e) {
+    document.getElementById('proxyListBox').innerHTML =
+      '<div class="empty-state">Не удалось загрузить список. Проверь интернет.</div>';
+    fetchBtn.disabled = false;
+    fetchBtn.textContent = '🔄 Загрузить и проверить список';
+    return;
+  }
+
+  // Берём случайную выборку, чтобы не долбить одни и те же топовые строки
+  const shuffled = lines.sort(() => Math.random() - 0.5).slice(0, MAX_PROXIES_TO_CHECK);
+
+  shuffled.forEach((line, idx) => {
+    const [host, port] = line.split(':');
+    if (!host || !port) return;
+    const id = 'p' + idx + '_' + Date.now();
+    proxyResults[id] = { host, port, status: 'pending' };
+  });
+  renderProxyList();
+
+  fetchBtn.textContent = '⏳ Проверяю прокси…';
+
+  const ids = Object.keys(proxyResults);
+  for (const id of ids) {
+    proxyResults[id].status = 'checking';
+    renderProxyList();
+    const p = proxyResults[id];
+    await new Promise(resolve => {
+      checkProxyNative(id, p.host, p.port, (alive, latencyMs) => {
+        proxyResults[id].status = alive ? 'alive' : 'dead';
+        proxyResults[id].latency = latencyMs;
+        renderProxyList();
+        resolve();
+      });
+    });
+  }
+
+  fetchBtn.disabled = false;
+  fetchBtn.textContent = '🔄 Загрузить и проверить список';
+}
+
+document.getElementById('fetchBtn').onclick = fetchAndCheckProxies;
 </script>
 </body>
 </html>
