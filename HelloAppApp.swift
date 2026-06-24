@@ -17,16 +17,26 @@ struct ContentView: View {
     }
 }
 
-// Делегат для обработки кликов и открытия профиля
+// Делегат, который перехватывает data: и превращает в реальный файл
 class Coordinator: NSObject, WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        // Если ссылка начинается с "data:", значит это наш сгенерированный профиль
+        
+        // Перехватываем ссылку data:
         if let url = navigationAction.request.url, url.scheme == "data" {
-            // Открываем этот профиль в системном Safari (iOS сама предложит его установить)
-            UIApplication.shared.open(url, options: [:], completionHandler: nil)
-            decisionHandler(.cancel) // Не загружаем в WebView, а отправляем в браузер
+            // 1. Сохраняем содержимое data: во временный файл
+            if let data = try? Data(contentsOf: url) {
+                let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent("ShadowVPN.mobileconfig")
+                try? data.write(to: tempFile)
+                
+                // 2. Открываем ЭТОТ файл в Safari (iOS сама выкинет окно профиля)
+                UIApplication.shared.open(tempFile, options: [:], completionHandler: nil)
+            }
+            
+            // 3. Блокируем загрузку в WebView
+            decisionHandler(.cancel)
             return
         }
+        
         decisionHandler(.allow)
     }
 }
