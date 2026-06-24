@@ -91,15 +91,20 @@ function buildOffConfig() {
 </dict></plist>`;
 }
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ: Отправка напрямую в Swift
+// ФУНКЦИЯ С ОТЛАДКОЙ
 function openProfile(xml) {
+    alert('Шаг 1: Кнопка нажата, JS работает.');
+    
     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mobileConfigHandler) {
-        window.webkit.messageHandlers.mobileConfigHandler.postMessage(xml);
+        alert('Шаг 2: Мост к Swift найден! Передаю XML...');
+        try {
+            window.webkit.messageHandlers.mobileConfigHandler.postMessage(xml);
+            alert('Шаг 3: XML успешно передан в приложение! Если окно профиля не появилось — проблема в самом Swift коде.');
+        } catch (e) {
+            alert('ОШИБКА ПЕРЕДАЧИ: ' + e.message);
+        }
     } else {
-        // Фоллбэк, если открыть файл просто в Safari на Mac для теста
-        const base64 = btoa(unescape(encodeURIComponent(xml)));
-        const dataUrl = 'data:application/x-apple-aspen-config;base64,' + base64;
-        window.location.href = dataUrl;
+        alert('ОШИБКА: Мост к Swift НЕ НАЙДЕН! Убедись, что в Swift коде добавлена строка: config.userContentController.add(..., name: "mobileConfigHandler")');
     }
 }
 
