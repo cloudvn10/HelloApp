@@ -17,31 +17,17 @@ struct ContentView: View {
     }
 }
 
+// Делегат для обработки кликов и открытия профиля
 class Coordinator: NSObject, WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        // Если ссылка начинается с "data:", значит это наш сгенерированный профиль
         if let url = navigationAction.request.url, url.scheme == "data" {
-            saveAndOpenProfile(dataUrl: url)
-            decisionHandler(.cancel)
+            // Открываем этот профиль в системном Safari (iOS сама предложит его установить)
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            decisionHandler(.cancel) // Не загружаем в WebView, а отправляем в браузер
             return
         }
         decisionHandler(.allow)
-    }
-
-    func saveAndOpenProfile(dataUrl: URL) {
-        guard let data = try? Data(contentsOf: dataUrl) else { return }
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent("ShadowVPN-\(Int(Date().timeIntervalSince1970)).mobileconfig")
-        do {
-            try data.write(to: fileURL)
-            DispatchQueue.main.async {
-                guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                      let rootVC = scene.windows.first?.rootViewController else { return }
-                let activityVC = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
-                rootVC.present(activityVC, animated: true)
-            }
-        } catch {
-            print("Ошибка сохранения профиля: \(error)")
-        }
     }
 }
 
