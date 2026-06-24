@@ -5,15 +5,11 @@ final class ViewController: UIViewController, WKScriptMessageHandler, WKNavigati
 
     private var webView: WKWebView!
 
-    // MARK: - Lifecycle
-
     override func viewDidLoad() {
         super.viewDidLoad()
         setupWebView()
         loadHTML()
     }
-
-    // MARK: - Setup
 
     private func setupWebView() {
         let config = WKWebViewConfiguration()
@@ -26,7 +22,6 @@ final class ViewController: UIViewController, WKScriptMessageHandler, WKNavigati
         webView.scrollView.backgroundColor = .black
         webView.scrollView.bounces = false
 
-        // Убираем серую тень под статус-баром на iOS 15+
         if #available(iOS 15.0, *) {
             webView.underPageBackgroundColor = .black
         }
@@ -43,15 +38,16 @@ final class ViewController: UIViewController, WKScriptMessageHandler, WKNavigati
 
     private func loadHTML() {
         guard let htmlURL = Bundle.main.url(forResource: "shadowvpn", withExtension: "html") else {
-            // Фоллбэк, если файл не попал в бандл
-            webView.loadHTMLString("<body style='background:#060606;color:red;padding:40px;font-family:sans-serif;'>shadowvpn.html не найден в бандле</body>", baseURL: nil)
+            webView.loadHTMLString(
+                "<body style='background:#060606;color:red;padding:40px;font-family:sans-serif;'>shadowvpn.html не найден в бандле</body>",
+                baseURL: nil
+            )
             return
         }
-        // allowingReadAccessTo — папка, чтобы fetch() к CDN работал
         webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
     }
 
-    // MARK: - WKScriptMessageHandler (приём сообщений от JS)
+    // MARK: - WKScriptMessageHandler
 
     func userContentController(
         _ userContentController: WKUserContentController,
@@ -67,7 +63,7 @@ final class ViewController: UIViewController, WKScriptMessageHandler, WKNavigati
         checkProxy(id: id, host: host, port: port)
     }
 
-    // MARK: - Проверка прокси (реально через этот прокси ходим)
+    // MARK: - Proxy Checker
 
     private func checkProxy(id: String, host: String, port: Int) {
         let config = URLSessionConfiguration.ephemeral
@@ -89,7 +85,6 @@ final class ViewController: UIViewController, WKScriptMessageHandler, WKNavigati
             let alive = (error == nil) && (statusCode == 200)
 
             DispatchQueue.main.async {
-                // Экранируем id на всякий случай (хотя он всегда alphanumeric+_)
                 let safeId = id.replacingOccurrences(of: "\\", with: "\\\\")
                                   .replacingOccurrences(of: "'", with: "\\'")
                 let js = "window.onProxyCheckResult('\(safeId)',\(alive),\(latency))"
@@ -98,7 +93,7 @@ final class ViewController: UIViewController, WKScriptMessageHandler, WKNavigati
         }.resume()
     }
 
-    // MARK: - WKNavigationDelegate (перехват скачивания .mobileconfig)
+    // MARK: - WKNavigationDelegate (перехват .mobileconfig)
 
     func webView(
         _ webView: WKWebView,
@@ -114,7 +109,6 @@ final class ViewController: UIViewController, WKScriptMessageHandler, WKNavigati
             return
         }
 
-        // Сохраняем во временный файл и показываем share sheet
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ShadowVPN.mobileconfig")
         try? data.write(to: tempURL)
@@ -123,12 +117,10 @@ final class ViewController: UIViewController, WKScriptMessageHandler, WKNavigati
             activityItems: [tempURL],
             applicationActivities: nil
         )
-        // На iPad нужен popover
         if let popover = activityVC.popoverPresentationController {
             popover.sourceView = view
             popover.sourceRect = CGRect(
-                x: view.bounds.midX,
-                y: view.bounds.midY,
+                x: view.bounds.midX, y: view.bounds.midY,
                 width: 0, height: 0
             )
             popover.permittedArrowDirections = []
