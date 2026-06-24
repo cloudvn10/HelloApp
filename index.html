@@ -27,10 +27,7 @@
             background: #0d0d0d; border: 1px solid #1f1f1f; border-radius: 8px;
             padding: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
         }
-        .proxy-card.checked { border-color: #c8ff3d; }
-        .proxy-card.alive { border-color: #00ff00; background: #0a1a0a; }
-        .proxy-card.dead { border-color: #ff4d4d; background: #1a0a0a; opacity: 0.5; }
-        .status-badge { font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: bold; }
+        .proxy-card:active { opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -55,7 +52,7 @@
 </div>
 
 <script>
-// Генератор UUID (без crypto.randomUUID для совместимости с iOS)
+// Генератор UUID
 function makeUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -127,67 +124,37 @@ document.getElementById('offBtn').onclick = () => {
     downloadConfig(buildOffConfig(), 'ShadowVPN-OFF.mobileconfig');
 };
 
-// ======= ЛОГИКА ЗАГРУЗКИ И ПРОВЕРКИ ПРОКСИ =======
+// ======= ЛОГИКА ЗАГРУЗКИ СПИСКА ПРОКСИ =======
 const proxyListEl = document.getElementById('proxyList');
 const fetchBtn = document.getElementById('fetchBtn');
-
-// Слушаем результаты от Swift
-window.addEventListener('proxyResult', (e) => {
-    const data = e.detail;
-    const card = document.querySelector(`[data-host="${data.host}"][data-port="${data.port}"]`);
-    if(card) {
-        card.classList.add('checked');
-        card.classList.add(data.alive ? 'alive' : 'dead');
-        card.querySelector('.status-badge').textContent = data.alive ? '✓ Жив' : '✗ Мертв';
-    }
-});
 
 fetchBtn.onclick = async () => {
     proxyListEl.innerHTML = '<div style="color: #888;">Загрузка списка...</div>';
     fetchBtn.disabled = true;
     
     try {
-        // Ссылка на актуальный список бесплатных прокси на GitHub (Proxifly)
         const response = await fetch('https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/http.txt');
         const text = await response.text();
         const proxies = text.split('\n').filter(line => line.trim() !== '');
         
         proxyListEl.innerHTML = '';
         
-        // Ограничим первыми 20, чтобы не вешать телефон
         proxies.slice(0, 20).forEach(line => {
             const [host, port] = line.split(':');
             if(!host || !port) return;
 
             const card = document.createElement('div');
             card.className = 'proxy-card';
-            card.dataset.host = host;
-            card.dataset.port = port;
             
-            card.innerHTML = `
-                <span>${host}:${port}</span>
-                <span class="status-badge">Проверка...</span>
-            `;
+            card.innerHTML = `<span>${host}:${port}</span>`;
 
-            // При клике на карточку вставляем данные в форму, если она жива
             card.onclick = () => {
-                if(card.classList.contains('alive')) {
-                    document.getElementById('host').value = host;
-                    document.getElementById('port').value = port;
-                    alert('Данные вставлены! Теперь нажми "Создать профиль"');
-                } else {
-                    alert('Этот прокси мертв или еще не проверен!');
-                }
+                document.getElementById('host').value = host;
+                document.getElementById('port').value = port;
+                alert('Данные вставлены! Теперь введи SSID и нажми "Создать профиль"');
             };
 
             proxyListEl.appendChild(card);
-
-            // Отправляем запрос в Swift на проверку
-            window.webkit.messageHandlers.swiftProxyChecker.postMessage({
-                action: 'checkProxy',
-                host: host,
-                port: port
-            });
         });
     } catch(e) {
         proxyListEl.innerHTML = '<div style="color: red;">Ошибка загрузки списка. Проверь интернет.</div>';
