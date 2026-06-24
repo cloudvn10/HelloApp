@@ -10,7 +10,10 @@ struct HelloAppApp: App {
     }
 }
 
-class Coordinator: NSObject, WKScriptMessageHandler {
+class Coordinator: NSObject, WKScriptMessageHandler, UIDocumentInteractionControllerDelegate {
+    // ВАЖНО: Храним контроллер здесь, чтобы он не удалялся из памяти
+    var docInteractionController: UIDocumentInteractionController?
+
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == "mobileConfigHandler", let xmlString = message.body as? String else { return }
         
@@ -20,16 +23,31 @@ class Coordinator: NSObject, WKScriptMessageHandler {
             try xmlString.write(to: tempFile, atomically: true, encoding: .utf8)
             
             DispatchQueue.main.async {
-                let docController = UIDocumentInteractionController(url: tempFile)
-                docController.uti = "com.apple.mobileconfig"
+                // Создаем и сохраняем контроллер в свойство класса
+                self.docInteractionController = UIDocumentInteractionController(url: tempFile)
+                self.docInteractionController?.delegate = self
+                self.docInteractionController?.uti = "com.apple.mobileconfig"
+                
+                // Ищем текущее окно для отображения
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                    let rootVC = windowScene.windows.first?.rootViewController {
-                    docController.presentOpenInMenu(from: .zero, in: rootVC.view, animated: true)
+                    
+                    // Показываем меню
+                    let success = self.docInteractionController?.presentOpenInMenu(from: .zero, in: rootVC.view, animated: true)
+                    
+                    if !success! {
+                        print("Ошибка: Не удалось показать меню открытия")
+                    }
                 }
             }
         } catch {
-            print("Ошибка: \(error)")
+            print("Ошибка записи файла: \(error)")
         }
+    }
+    
+    // Делегат нужен для корректной работы UIDocumentInteractionController
+    func documentInteractionControllerViewControllerForPreview(_ controller: UIDocumentInteractionController) -> UIViewController {
+        return UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap { $0.windows }.first!.rootViewController!
     }
 }
 
