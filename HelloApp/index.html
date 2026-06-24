@@ -60,34 +60,6 @@
     padding-left: 2px;
   }
 
-  .countries-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-  }
-  .country-card {
-    background: #0d0d0d;
-    border: 1px solid #1f1f1f;
-    border-radius: 14px;
-    padding: 10px 8px 8px;
-    text-align: center;
-    -webkit-user-select: none;
-  }
-  .country-card:active { transform: scale(0.96); }
-  .flag-dot {
-    width: 100%;
-    aspect-ratio: 3/2;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08);
-  }
-  .country-name {
-    font-size: 11px;
-    font-weight: 700;
-    margin-top: 6px;
-    color: #9a9a9a;
-  }
-  .country-link { text-decoration: none; display: block; }
-
   .input-row { display: flex; gap: 8px; }
   .input-field {
     flex: 1;
@@ -143,64 +115,69 @@
 
   <div class="header">
     <div class="logo">SHADOW<span>VPN</span></div>
-    <div class="subtitle">iOS Proxy Profile</div>
+    <div class="subtitle">iOS Wi-Fi Proxy Profile</div>
   </div>
 
   <div class="main-content">
 
     <div class="info-box">
-      На iPhone прокси работает через системный профиль, а не через приложение.
-      Тапни страну — скачается файл <b>.mobileconfig</b> — поставь его в Настройках.
+      Профиль работает только когда телефон подключён к указанной Wi-Fi сети.
+      На мобильном интернете и других сетях прокси не действует — это ограничение iOS, не баг.
     </div>
 
-    <div class="section-label">Локации</div>
-    <div class="countries-grid" id="grid"></div>
+    <div class="section-label">Wi-Fi сеть (SSID)</div>
+    <div class="input-row">
+      <input type="text" class="input-field" id="ssid" placeholder="Например HUAWEI-7">
+    </div>
 
-    <div class="section-label">Свой сервер</div>
+    <div class="section-label">Прокси сервер</div>
     <div class="input-row">
       <input type="text" class="input-field" id="host" placeholder="IP или хост">
       <input type="text" class="input-field small" id="port" placeholder="Порт" value="8080">
     </div>
     <button class="btn" id="customBtn">Создать профиль</button>
 
-    <button class="btn btn-off" id="offBtn">Отключить прокси (профиль OFF)</button>
+    <button class="btn btn-off" id="offBtn">Stop (отключить прокси)</button>
 
     <div class="steps">
       <b>Как поставить профиль:</b>
       <ol>
-        <li>Тапни страну или "Создать профиль"</li>
-        <li>Safari спросит — разреши скачать</li>
-        <li>Настройки → Загружен профиль (вверху)</li>
+        <li>Заполни SSID, хост и порт, тапни "Создать профиль"</li>
+        <li>Откроется окно "Поделиться" — выбери "Сохранить в Файлы" (или сразу открой)</li>
+        <li>Настройки → сверху появится "Профиль загружен"</li>
         <li>Установить → введи код-пароль → Установить</li>
-        <li>Готово — прокси работает на всём телефоне</li>
+        <li>Прокси активен только когда ты на этой Wi-Fi сети</li>
       </ol>
-      Чтобы выключить — Настройки → Основные → VPN и управление устройством →
-      найди профиль → Удалить профиль. Или поставь "Отключить прокси" сверху.
+      Чтобы выключить — жми "Stop" выше и установи получившийся профиль тем же способом.
+      Он перезапишет текущий и снимет прокси.
     </div>
 
   </div>
 </div>
 
 <script>
-const COUNTRIES = [
-  { id: 'uk', name: 'UK', host: '86.53.163.185', port: 10001, color: '#012169' },
-  { id: 'usa', name: 'US', host: '47.79.119.13', port: 8080, color: '#3c3b6e' },
-  { id: 'nl', name: 'NL', host: '138.124.113.102', port: 7443, color: 'linear-gradient(180deg,#ae1c28 33%,white 33%,white 66%,#21468b 66%)' },
-  { id: 'fr', name: 'FR', host: '40.89.145.14', port: 80, color: 'linear-gradient(90deg,#002395 33%,white 33%,white 66%,#ed2939 66%)' },
-  { id: 'de', name: 'DE', host: '138.201.198.53', port: 80, color: 'linear-gradient(180deg,#000 33%,#dd0000 33%,#dd0000 66%,#ffce00 66%)' },
-  { id: 'pl', name: 'PL', host: '178.212.144.7', port: 80, color: 'linear-gradient(180deg,white 50%,#dc143c 50%)' }
-];
-
 function escapeXML(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function buildMobileConfig(host, port, label) {
+function makeUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Фиксированный UUID профиля — система видит новый файл как ОБНОВЛЕНИЕ
+// того же профиля (по PayloadUUID/PayloadIdentifier), а не как новый.
+// Поэтому Stop реально снимает прокси, а не просто добавляет второй профиль.
+const FIXED_PROFILE_UUID = "a1b2c3d4-0000-4000-8000-000000000001";
+const FIXED_PROFILE_ID = "com.shadowvpn.profile.main";
+
+function buildMobileConfig(host, port, ssid) {
   const payloadUUID = makeUUID();
-  const profileUUID = makeUUID();
-  const safeLabel = escapeXML(label);
   const safeHost = escapeXML(host);
-  const ssid = "HUAWEI-7";
+  const safeSsid = escapeXML(ssid);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -218,9 +195,9 @@ function buildMobileConfig(host, port, label) {
       <key>PayloadUUID</key>
       <string>${payloadUUID}</string>
       <key>PayloadDisplayName</key>
-      <string>ShadowVPN Wi-Fi - ${safeLabel}</string>
+      <string>ShadowVPN Wi-Fi</string>
       <key>SSID_STR</key>
-      <string>${ssid}</string>
+      <string>${safeSsid}</string>
       <key>EncryptionType</key>
       <string>WPA2</string>
       <key>ProxyType</key>
@@ -232,27 +209,26 @@ function buildMobileConfig(host, port, label) {
     </dict>
   </array>
   <key>PayloadDisplayName</key>
-  <string>ShadowVPN - ${safeLabel}</string>
+  <string>ShadowVPN Active</string>
   <key>PayloadIdentifier</key>
-  <string>com.shadowvpn.profile.${profileUUID}</string>
+  <string>${FIXED_PROFILE_ID}</string>
   <key>PayloadRemovalDisallowed</key>
   <false/>
   <key>PayloadType</key>
   <string>Configuration</string>
   <key>PayloadUUID</key>
-  <string>${profileUUID}</string>
+  <string>${FIXED_PROFILE_UUID}</string>
   <key>PayloadVersion</key>
   <integer>1</integer>
   <key>PayloadOrganization</key>
   <string>ShadowVPN</string>
   <key>PayloadDescription</key>
-  <string>Прокси ${safeHost}:${port} для сети ${ssid}</string>
+  <string>Прокси ${safeHost}:${port} для сети ${safeSsid}</string>
 </dict>
 </plist>`;
 }
 
 function buildOffConfig() {
-  const profileUUID = crypto.randomUUID();
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -260,61 +236,39 @@ function buildOffConfig() {
   <key>PayloadContent</key>
   <array></array>
   <key>PayloadDisplayName</key>
-  <string>ShadowVPN - OFF</string>
+  <string>ShadowVPN Active</string>
   <key>PayloadIdentifier</key>
-  <string>com.shadowvpn.profile.off.${profileUUID}</string>
+  <string>${FIXED_PROFILE_ID}</string>
   <key>PayloadRemovalDisallowed</key>
   <false/>
   <key>PayloadType</key>
   <string>Configuration</string>
   <key>PayloadUUID</key>
-  <string>${profileUUID}</string>
+  <string>${FIXED_PROFILE_UUID}</string>
   <key>PayloadVersion</key>
   <integer>1</integer>
   <key>PayloadOrganization</key>
   <string>ShadowVPN</string>
   <key>PayloadDescription</key>
-  <string>Удали старый профиль вручную через Настройки, этот файл просто заглушка</string>
+  <string>Профиль без прокси — Stop</string>
 </dict>
 </plist>`;
 }
-
-function downloadConfig(xml, filename) {
-  const blob = new Blob([xml], { type: 'application/x-apple-aspen-config' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function renderCountries() {
-  const grid = document.getElementById('grid');
-  grid.innerHTML = '';
-  COUNTRIES.forEach(c => {
-    const card = document.createElement('div');
-    card.className = 'country-card';
-    card.innerHTML = `
-      <div class="flag-dot" style="background:${c.color}"></div>
-      <div class="country-name">${c.name}</div>
-    `;
-    card.onclick = () => {
-      const xml = buildMobileConfig(c.host, c.port, c.name);
-      downloadConfig(xml, `ShadowVPN-${c.name}.mobileconfig`);
-    };
-    grid.appendChild(card);
-  });
-}
-renderCountries();
 
 function downloadConfig(xml, filename) {
   const base64 = btoa(unescape(encodeURIComponent(xml)));
   const dataUrl = 'data:application/x-apple-aspen-config;base64,' + base64;
   window.location.href = dataUrl;
 }
+
+document.getElementById('customBtn').onclick = () => {
+  const host = document.getElementById('host').value.trim();
+  const port = document.getElementById('port').value.trim() || '8080';
+  const ssid = document.getElementById('ssid').value.trim();
+  if (!host || !ssid) { alert('Введи SSID и хост'); return; }
+  const xml = buildMobileConfig(host, port, ssid);
+  downloadConfig(xml, 'ShadowVPN.mobileconfig');
+};
 
 document.getElementById('offBtn').onclick = () => {
   const xml = buildOffConfig();
