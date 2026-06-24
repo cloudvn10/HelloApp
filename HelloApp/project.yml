@@ -6,9 +6,9 @@ targets:
     type: application
     platform: iOS
     deploymentTarget: "14.0"
-    sources: [HelloApp/HelloApp]
+    sources: [HelloApp]
     info:
-      path: HelloApp/HelloApp/Info.plist
+      path: HelloApp/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.test.helloapp
