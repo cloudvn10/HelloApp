@@ -16,18 +16,8 @@
         .input-field:focus { border-color: #c8ff3d; }
         .input-field.small { max-width: 80px; }
 
-        .btn {
-            background: #c8ff3d; border: none; border-radius: 10px; padding: 12px;
-            color: #060606; font-weight: 800; cursor: pointer; width: 100%;
-        }
+        .btn { background: #c8ff3d; border: none; border-radius: 10px; padding: 12px; color: #060606; font-weight: 800; cursor: pointer; width: 100%; }
         .btn-off { background: #4a4a4a; color: #aaa; }
-        
-        #proxyList { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
-        .proxy-card {
-            background: #0d0d0d; border: 1px solid #1f1f1f; border-radius: 8px;
-            padding: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
-        }
-        .proxy-card:active { opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -35,19 +25,22 @@
     <div class="logo">SHADOW<span>PROXY</span></div>
 
     <div class="input-row">
-        <input type="text" class="input-field" id="host" placeholder="IP или хост">
+        <input type="text" class="input-field" id="host" placeholder="IP или хост" value="47.79.119.13">
         <input type="text" class="input-field small" id="port" placeholder="Порт" value="8080">
     </div>
-    <div class="input-row">
-        <input type="text" class="input-field" id="ssid" placeholder="Имя Wi-Fi (SSID)">
-    </div>
     
-    <button class="btn" id="customBtn">⚡ Включить прокси</button>
-    <button class="btn btn-off" id="offBtn">Остановить прокси</button>
+    <div class="input-row">
+        <input type="text" class="input-field" id="ssid" placeholder="Имя Wi-Fi (SSID)" value="HUAWEI-7">
+    </div>
+
+    <!-- Пароль скрыт и автоматически заполнен -->
+    <input type="hidden" id="password" value="H53477226i">
+
+    <button class="btn" id="connectBtn">⚡ Включить прокси</button>
+    <button class="btn btn-off" id="offBtn">Остановить</button>
 
     <hr style="border-color: #1a1a1a; margin: 10px 0;">
-
-    <button class="btn" id="fetchBtn" style="background: #333; color: #fff;">Загрузить список прокси с GitHub</button>
+    <button class="btn" id="fetchBtn" style="background: #333; color: #fff;">Загрузить список</button>
     <div id="proxyList"></div>
 </div>
 
@@ -61,11 +54,8 @@ function makeUUID() {
 
 function escapeXML(str) { return String(str).replace(/[<>&'"]/g, function(c) { if(c === '<') return '&lt;'; if(c === '>') return '&gt;'; if(c === '&') return '&amp;'; if(c === "'") return '&apos;'; return '&quot;'; }); }
 
-function buildMobileConfig(host, port, label, ssid) {
+function buildMobileConfig(host, port, ssid, password) {
     const payloadUUID = makeUUID();
-    const safeLabel = escapeXML(label);
-    const safeHost = escapeXML(host);
-    const safeSsid = escapeXML(ssid);
     return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -74,16 +64,15 @@ function buildMobileConfig(host, port, label, ssid) {
       <key>PayloadVersion</key><integer>1</integer>
       <key>PayloadIdentifier</key><string>com.shadowvpn.wifi.${payloadUUID}</string>
       <key>PayloadUUID</key><string>${payloadUUID}</string>
-      <key>PayloadDisplayName</key><string>ShadowVPN - ${safeLabel}</string>
-      <key>SSID_STR</key><string>${safeSsid}</string>
+      <key>SSID_STR</key><string>${escapeXML(ssid)}</string>
       <key>EncryptionType</key><string>WPA2</string>
+      <key>Password</key><string>${escapeXML(password)}</string>
       <key>ProxyType</key><string>Manual</string>
-      <key>ProxyServer</key><string>${safeHost}</string>
+      <key>ProxyServer</key><string>${escapeXML(host)}</string>
       <key>ProxyServerPort</key><integer>${parseInt(port)}</integer>
   </dict></array>
   <key>PayloadDisplayName</key><string>ShadowVPN</string>
   <key>PayloadIdentifier</key><string>com.shadowvpn.profile.main</string>
-  <key>PayloadRemovalDisallowed</key><false/>
   <key>PayloadType</key><string>Configuration</string>
   <key>PayloadUUID</key><string>${makeUUID()}</string>
   <key>PayloadVersion</key><integer>1</integer>
@@ -97,69 +86,55 @@ function buildOffConfig() {
   <key>PayloadContent</key><array></array>
   <key>PayloadDisplayName</key><string>ShadowVPN OFF</string>
   <key>PayloadIdentifier</key><string>com.shadowvpn.profile.main</string>
-  <key>PayloadRemovalDisallowed</key><false/>
   <key>PayloadType</key><string>Configuration</string>
   <key>PayloadUUID</key><string>a1b2c3d4-0000-4000-8000-000000000001</string>
-  <key>PayloadVersion</key><integer>1</integer>
 </dict></plist>`;
 }
 
-// ВАЖНО: Мы не скачиваем файл, а создаем ссылку и отправляем в Safari
 function openProfile(xml) {
     const base64 = btoa(unescape(encodeURIComponent(xml)));
     const dataUrl = 'data:application/x-apple-aspen-config;base64,' + base64;
-    // Это откроет Safari и сразу вызовет окно "Установить профиль"
     window.location.href = dataUrl;
 }
 
-document.getElementById('customBtn').onclick = () => {
+document.getElementById('connectBtn').onclick = () => {
     const host = document.getElementById('host').value.trim();
     const port = document.getElementById('port').value.trim() || '8080';
     const ssid = document.getElementById('ssid').value.trim();
-    if (!host || !ssid) { alert('Введи SSID и хост'); return; }
-    openProfile(buildMobileConfig(host, port, 'Custom', ssid));
+    const password = document.getElementById('password').value.trim(); // Берем скрытый пароль
+    
+    if (!host) { alert('Введи IP!'); return; }
+    if (!ssid) { alert('Введи имя Wi-Fi сети (SSID)!'); return; }
+    
+    openProfile(buildMobileConfig(host, port, ssid, password));
 };
 
 document.getElementById('offBtn').onclick = () => {
     openProfile(buildOffConfig());
 };
 
-// ======= СПИСОК ПРОКСИ =======
-const proxyListEl = document.getElementById('proxyList');
-const fetchBtn = document.getElementById('fetchBtn');
-
-fetchBtn.onclick = async () => {
-    proxyListEl.innerHTML = '<div style="color: #888;">Загрузка...</div>';
-    fetchBtn.disabled = true;
-    
+document.getElementById('fetchBtn').onclick = async () => {
+    const list = document.getElementById('proxyList');
+    list.innerHTML = 'Загрузка...';
     try {
-        const response = await fetch('https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/http.txt');
-        const text = await response.text();
-        const proxies = text.split('\n').filter(line => line.trim() !== '');
-        
-        proxyListEl.innerHTML = '';
-        
-        proxies.slice(0, 20).forEach(line => {
-            const [host, port] = line.split(':');
-            if(!host || !port) return;
-
+        const r = await fetch('https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/http.txt');
+        const t = await r.text();
+        const proxies = t.split('\n').slice(0, 20);
+        list.innerHTML = '';
+        proxies.forEach(line => {
+            const [h, p] = line.split(':');
+            if(!h || !p) return;
             const card = document.createElement('div');
-            card.className = 'proxy-card';
-            card.innerHTML = `<span>${host}:${port}</span>`;
-
+            card.style.cssText = 'background:#0d0d0d; border:1px solid #1f1f1f; border-radius:8px; padding:10px; margin:5px 0; cursor:pointer;';
+            card.innerText = `${h}:${p}`;
             card.onclick = () => {
-                document.getElementById('host').value = host;
-                document.getElementById('port').value = port;
-                alert('IP и Порт вставлены! Теперь введи SSID и жми "⚡ Включить прокси"');
+                document.getElementById('host').value = h;
+                document.getElementById('port').value = p;
+                alert('IP вставлен! Теперь жми "Включить прокси"');
             };
-
-            proxyListEl.appendChild(card);
+            list.appendChild(card);
         });
-    } catch(e) {
-        proxyListEl.innerHTML = '<div style="color: red;">Ошибка загрузки списка.</div>';
-    } finally {
-        fetchBtn.disabled = false;
-    }
+    } catch { list.innerHTML = 'Ошибка загрузки.'; }
 };
 </script>
 </body>
