@@ -5,148 +5,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: system-ui, sans-serif; background: #060606; color: #f2f2f0; padding: 20px; }
-        .container { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
-        
-        .logo { font-size: 24px; font-weight: 800; color: #f2f2f0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: #060606; 
+            color: #f2f2f0; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+        }
+        .container { max-width: 400px; margin: 0 auto; width: 100%; }
+        .logo { font-size: 24px; font-weight: 800; margin-bottom: 20px; text-align: center; }
         .logo span { color: #c8ff3d; }
-        
-        .input-row { display: flex; gap: 10px; }
-        .input-field { flex: 1; background: #0d0d0d; border: 1px solid #1f1f1f; border-radius: 10px; padding: 12px; color: white; outline: none; }
-        .input-field:focus { border-color: #c8ff3d; }
-        .input-field.small { max-width: 80px; }
-
-        .btn { background: #c8ff3d; border: none; border-radius: 10px; padding: 12px; color: #060606; font-weight: 800; cursor: pointer; width: 100%; }
-        .btn-off { background: #4a4a4a; color: #aaa; }
+        .input-field { 
+            width: 100%; 
+            background: #0d0d0d; 
+            border: 1px solid #1f1f1f; 
+            border-radius: 10px; 
+            padding: 15px; 
+            color: white; 
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .btn { 
+            background: #c8ff3d; 
+            border: none; 
+            border-radius: 10px; 
+            padding: 15px; 
+            color: #060606; 
+            font-weight: 800; 
+            width: 100%; 
+            cursor: pointer; 
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="logo">SHADOW<span>PROXY</span></div>
 
-    <div class="input-row">
-        <input type="text" class="input-field" id="host" placeholder="IP или хост" value="47.79.119.13">
-        <input type="text" class="input-field small" id="port" placeholder="Порт" value="8080">
-    </div>
-    
-    <div class="input-row">
-        <input type="text" class="input-field" id="ssid" placeholder="Имя Wi-Fi (SSID)" value="HUAWEI-7">
-    </div>
-
-    <!-- Пароль скрыт и автоматически заполнен -->
-    <input type="hidden" id="password" value="H53477226i">
+    <input type="text" class="input-field" id="host" placeholder="IP или хост" value="47.79.119.13">
+    <input type="text" class="input-field" id="port" placeholder="Порт" value="8080">
+    <input type="text" class="input-field" id="ssid" placeholder="Имя Wi-Fi (SSID)" value="HUAWEI-7">
 
     <button class="btn" id="connectBtn">⚡ Включить прокси</button>
-    <button class="btn btn-off" id="offBtn">Остановить</button>
-
-    <hr style="border-color: #1a1a1a; margin: 10px 0;">
-    <button class="btn" id="fetchBtn" style="background: #333; color: #fff;">Загрузить список</button>
-    <div id="proxyList"></div>
 </div>
 
 <script>
-function makeUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
-function escapeXML(str) { return String(str).replace(/[<>&'"]/g, function(c) { if(c === '<') return '&lt;'; if(c === '>') return '&gt;'; if(c === '&') return '&amp;'; if(c === "'") return '&apos;'; return '&quot;'; }); }
-
-function buildMobileConfig(host, port, ssid, password) {
-    const payloadUUID = makeUUID();
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>PayloadContent</key><array><dict>
-      <key>PayloadType</key><string>com.apple.wifi.managed</string>
-      <key>PayloadVersion</key><integer>1</integer>
-      <key>PayloadIdentifier</key><string>com.shadowvpn.wifi.${payloadUUID}</string>
-      <key>PayloadUUID</key><string>${payloadUUID}</string>
-      <key>SSID_STR</key><string>${escapeXML(ssid)}</string>
-      <key>EncryptionType</key><string>WPA2</string>
-      <key>Password</key><string>${escapeXML(password)}</string>
-      <key>ProxyType</key><string>Manual</string>
-      <key>ProxyServer</key><string>${escapeXML(host)}</string>
-      <key>ProxyServerPort</key><integer>${parseInt(port)}</integer>
-  </dict></array>
-  <key>PayloadDisplayName</key><string>ShadowVPN</string>
-  <key>PayloadIdentifier</key><string>com.shadowvpn.profile.main</string>
-  <key>PayloadType</key><string>Configuration</string>
-  <key>PayloadUUID</key><string>${makeUUID()}</string>
-  <key>PayloadVersion</key><integer>1</integer>
-</dict></plist>`;
-}
-
-function buildOffConfig() {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>PayloadContent</key><array></array>
-  <key>PayloadDisplayName</key><string>ShadowVPN OFF</string>
-  <key>PayloadIdentifier</key><string>com.shadowvpn.profile.main</string>
-  <key>PayloadType</key><string>Configuration</string>
-  <key>PayloadUUID</key><string>a1b2c3d4-0000-4000-8000-000000000001</string>
-</dict></plist>`;
-}
-
-// ФУНКЦИЯ С ОТЛАДКОЙ
-function openProfile(xml) {
-    alert('Шаг 1: Кнопка нажата, JS работает.');
-    
-    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mobileConfigHandler) {
-        alert('Шаг 2: Мост к Swift найден! Передаю XML...');
-        try {
-            window.webkit.messageHandlers.mobileConfigHandler.postMessage(xml);
-            alert('Шаг 3: XML успешно передан в приложение! Если окно профиля не появилось — проблема в самом Swift коде.');
-        } catch (e) {
-            alert('ОШИБКА ПЕРЕДАЧИ: ' + e.message);
-        }
-    } else {
-        alert('ОШИБКА: Мост к Swift НЕ НАЙДЕН! Убедись, что в Swift коде добавлена строка: config.userContentController.add(..., name: "mobileConfigHandler")');
+    function makeUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        }).toUpperCase();
     }
-}
 
-document.getElementById('connectBtn').onclick = () => {
-    const host = document.getElementById('host').value.trim();
-    const port = document.getElementById('port').value.trim() || '8080';
-    const ssid = document.getElementById('ssid').value.trim();
-    const password = document.getElementById('password').value.trim(); // Берем скрытый пароль
-    
-    if (!host) { alert('Введи IP!'); return; }
-    if (!ssid) { alert('Введи имя Wi-Fi сети (SSID)!'); return; }
-    
-    openProfile(buildMobileConfig(host, port, ssid, password));
-};
+    document.getElementById('connectBtn').onclick = function() {
+        const host = document.getElementById('host').value;
+        const port = document.getElementById('port').value;
+        const ssid = document.getElementById('ssid').value;
+        
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadType</key>
+            <string>com.apple.wifi.managed</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>PayloadIdentifier</key>
+            <string>com.shadowvpn.wifi.${makeUUID()}</string>
+            <key>PayloadUUID</key>
+            <string>${makeUUID()}</string>
+            <key>SSID_STR</key>
+            <string>${ssid}</string>
+            <key>EncryptionType</key>
+            <string>WPA2</string>
+            <key>Password</key>
+            <string>H53477226i</string>
+            <key>ProxyType</key>
+            <string>Manual</string>
+            <key>ProxyServer</key>
+            <string>${host}</string>
+            <key>ProxyServerPort</key>
+            <integer>${port}</integer>
+        </dict>
+    </array>
+    <key>PayloadDisplayName</key>
+    <string>ShadowVPN</string>
+    <key>PayloadIdentifier</key>
+    <string>com.shadowvpn.profile.main</string>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>${makeUUID()}</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>`;
 
-document.getElementById('offBtn').onclick = () => {
-    openProfile(buildOffConfig());
-};
-
-document.getElementById('fetchBtn').onclick = async () => {
-    const list = document.getElementById('proxyList');
-    list.innerHTML = 'Загрузка...';
-    try {
-        const r = await fetch('https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/http.txt');
-        const t = await r.text();
-        const proxies = t.split('\n').slice(0, 20);
-        list.innerHTML = '';
-        proxies.forEach(line => {
-            const [h, p] = line.split(':');
-            if(!h || !p) return;
-            const card = document.createElement('div');
-            card.style.cssText = 'background:#0d0d0d; border:1px solid #1f1f1f; border-radius:8px; padding:10px; margin:5px 0; cursor:pointer;';
-            card.innerText = `${h}:${p}`;
-            card.onclick = () => {
-                document.getElementById('host').value = h;
-                document.getElementById('port').value = p;
-                alert('IP вставлен! Теперь жми "Включить прокси"');
-            };
-            list.appendChild(card);
-        });
-    } catch { list.innerHTML = 'Ошибка загрузки.'; }
-};
+        // Отправляем данные в Swift
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mobileConfigHandler) {
+            window.webkit.messageHandlers.mobileConfigHandler.postMessage(xml);
+        } else {
+            console.error("Swift bridge not found");
+        }
+    };
 </script>
 </body>
 </html>
